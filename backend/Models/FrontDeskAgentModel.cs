@@ -3,7 +3,7 @@ using System;
 
 namespace Shiftr.Models
 {
-    public class FrontDeskAgent
+    public class FrontDeskAgentModel
     {
         public int Id { get; set;}
         public required string FirstName {get; set;}
@@ -12,7 +12,8 @@ namespace Shiftr.Models
         public required string Email {get; set;}
         public required string PhoneNumber {get; set;}
         public DateTime HireDate {get; set;}
-        
+
+        public WorkShifts ShiftWorked {get; set;}
 
     }
 }
