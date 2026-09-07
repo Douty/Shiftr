@@ -7,11 +7,11 @@ namespace Shiftr.Models
         Morning,
         Night,
         Overnight
-    } 
+    }
     public class Shift
     {
-        public WorkShifts Type {get; set;}
-        public TimeOnly Start {get; set;}
-        public TimeOnly End {get; set;}
+        public WorkShifts Type { get; set; }
+        public TimeOnly Start { get; set; }
+        public TimeOnly End { get; set; }
     }
 }

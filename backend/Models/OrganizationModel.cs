@@ -6,6 +6,8 @@ namespace Shiftr.Models
     {
         public int Id {get; set;}
         public required string Name;
+      
+        public required List<PropertyModel> Properties = new();
         
     }
 }
