@@ -6,6 +6,6 @@ namespace Shiftr.Models
 {
     public class FrontDeskAgentModel : EmployeeBase
     {
-        public WorkShifts ShiftWorked { get; set; }
+        public List<Shift> ShiftWorked { get; set; } = new();
     }
 }

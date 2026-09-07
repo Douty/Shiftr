@@ -8,7 +8,7 @@ namespace Shiftr.Models
         Night,
         Overnight
     }
-    public class Shift
+    public struct Shift
     {
         public WorkShifts Type { get; set; }
         public TimeOnly Start { get; set; }
