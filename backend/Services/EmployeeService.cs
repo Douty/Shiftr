@@ -15,5 +15,9 @@ namespace Shiftr.Services
         {
             return Employee.Type == EmployeeType.Manager || Employee.Type == EmployeeType.Owner;
         }
+        public bool IsOwner(EmployeeBase Employee)
+        {
+            return Employee.Type == EmployeeType.Owner;
+        }
     }
 }
