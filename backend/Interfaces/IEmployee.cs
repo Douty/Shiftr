@@ -10,7 +10,7 @@ namespace Shiftr.Interfaces
         public string PhoneNumber { get; set; }
         public DateTime HireDate { get; set; }
 
-        public EmployeeType type {get; set;}
+        public EmployeeType Type {get; }
     }
     
     public enum EmployeeType

@@ -12,7 +12,7 @@ namespace Shiftr.Models
         public required string PhoneNumber { get; set; }
         public DateTime HireDate { get; set; }
 
-        public EmployeeType type {get; set;}
+        public abstract EmployeeType Type {get; }
         
     }
 }
