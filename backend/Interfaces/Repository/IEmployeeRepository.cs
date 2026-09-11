@@ -10,5 +10,6 @@ namespace Shiftr.Interface
         Task<EmployeeBase> AddAsync(EmployeeBase employee);
         Task UpdateAsync(EmployeeBase employee);
         Task DeleteAsync(EmployeeBase employee);
+        
     }
 }
