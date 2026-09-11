@@ -1,11 +1,17 @@
 
 using Shiftr.Interface;
 using Shiftr.Models;
+using Shiftr.Repository;
 
 namespace Shiftr.Services
 {
     public class EmployeeService : IEmployeeService
     {
+        private readonly EmployeeRepository _Repository;
+        public EmployeeService(EmployeeRepository employeeRepository)
+        {
+            _Repository = employeeRepository;
+        }
         public void CreateEmployee(EmployeeBase Employee)
         {
             throw new NotImplementedException();
