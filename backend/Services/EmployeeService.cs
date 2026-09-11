@@ -6,6 +6,15 @@ namespace Shiftr.Services
 {
     public class EmployeeService : IEmployeeService
     {
+        public void CreateEmployee(EmployeeBase Employee)
+        {
+            throw new NotImplementedException();
+        }
+
+        public bool DeleteEmployee(EmployeeBase Employee)
+        {
+            throw new NotImplementedException();
+        }
 
         public async Task<EmployeeBase?> GetEmployeeByID(int EmployeeId)
         {
@@ -18,6 +27,11 @@ namespace Shiftr.Services
         public bool IsOwner(EmployeeBase Employee)
         {
             return Employee.Type == EmployeeType.Owner;
+        }
+
+        public void UpdateEmployee(EmployeeBase Employee)
+        {
+            throw new NotImplementedException();
         }
     }
 }
