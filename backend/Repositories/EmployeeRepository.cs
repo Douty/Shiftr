@@ -1,4 +1,7 @@
 
+using System.Security.Cryptography.X509Certificates;
+using Microsoft.EntityFrameworkCore;
+using Shiftr.Data;
 using Shiftr.Interface;
 using Shiftr.Models;
 
@@ -6,9 +9,26 @@ namespace Shiftr.Repository
 {
     public class EmployeeRepository : IEmployeeRepository
     {
-        public Task<EmployeeBase> AddAsync(EmployeeBase employee)
+        private readonly ShiftrDbContext _context;
+        public EmployeeRepository(ShiftrDbContext context)
         {
-            throw new NotImplementedException();
+            _context = context;
+        } 
+        public async Task<EmployeeBase> AddAsync(EmployeeBase employee)
+        {
+            _context.Employees.Add(employee);
+            await _context.SaveChangesAsync();
+            return employee;
+        }
+
+        public async Task DeleteAsync(int Id)
+        {
+            EmployeeBase? Employee = await GetByIdAsync(Id);
+            if (Employee is not null)
+            {
+                _context.Employees.Remove(Employee);
+                await _context.SaveChangesAsync();
+            }
         }
 
         public Task DeleteAsync(EmployeeBase employee)
@@ -16,19 +36,21 @@ namespace Shiftr.Repository
             throw new NotImplementedException();
         }
 
-        public Task<List<EmployeeBase>> GetAllAsync()
+        public async Task<List<EmployeeBase>> GetAllAsync()
         {
-            throw new NotImplementedException();
+            return await _context.Employees.ToListAsync();
         }
 
-        public Task<EmployeeBase?> GetByIDAsync(int Id)
+        public async Task<EmployeeBase?> GetByIdAsync(int Id)
         {
-            throw new NotImplementedException();
+            return await _context.Employees.FirstOrDefaultAsync(e => e.Id == Id);
         }
 
-        public Task UpdateAsync(EmployeeBase employee)
+       
+        public async Task UpdateAsync(EmployeeBase employee)
         {
-            throw new NotImplementedException();
+            _context.Employees.Update(employee);
+            await _context.SaveChangesAsync();
         }
     }
 }
