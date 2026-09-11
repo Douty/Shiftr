@@ -21,20 +21,18 @@ namespace Shiftr.Repository
             return employee;
         }
 
-        public async Task DeleteAsync(int Id)
+        public async Task<bool> DeleteAsync(EmployeeBase employee)
         {
-            EmployeeBase? Employee = await GetByIdAsync(Id);
-            if (Employee is not null)
-            {
-                _context.Employees.Remove(Employee);
-                await _context.SaveChangesAsync();
-            }
+            
+            if (employee is  null) return false;
+            
+            _context.Employees.Remove(employee);
+            int rowAffected = await _context.SaveChangesAsync();
+            return rowAffected > 0;
+            
         }
 
-        public Task DeleteAsync(EmployeeBase employee)
-        {
-            throw new NotImplementedException();
-        }
+        
 
         public async Task<List<EmployeeBase>> GetAllAsync()
         {
@@ -47,10 +45,12 @@ namespace Shiftr.Repository
         }
 
        
-        public async Task UpdateAsync(EmployeeBase employee)
+        public async Task<EmployeeBase> UpdateAsync(EmployeeBase employee)
         {
             _context.Employees.Update(employee);
             await _context.SaveChangesAsync();
+            return employee;
+            
         }
     }
 }

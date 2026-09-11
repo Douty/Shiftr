@@ -12,16 +12,25 @@ namespace Shiftr.Services
         {
             _Repository = employeeRepository;
         }
-        public void CreateEmployee(EmployeeBase Employee)
+        public async Task<EmployeeBase?> GetEmployeeById(int Id)
         {
-            throw new NotImplementedException();
+            return await _Repository.GetByIdAsync(Id);
         }
 
-        public bool DeleteEmployee(EmployeeBase Employee)
+        public async Task<EmployeeBase> CreateEmployee(EmployeeBase Employee)
         {
-            throw new NotImplementedException();
+            return await _Repository.AddAsync(Employee);
         }
 
+        public async Task<bool> DeleteEmployee(EmployeeBase employee)
+        {
+            return await _Repository.DeleteAsync(employee);
+        }
+
+        public async Task<EmployeeBase> UpdateEmployee(EmployeeBase Employee)
+        {
+            return await _Repository.UpdateAsync(Employee);
+        }
         public async Task<EmployeeBase?> GetEmployeeByID(int EmployeeId)
         {
              throw new NotImplementedException();
@@ -34,10 +43,6 @@ namespace Shiftr.Services
         {
             return Employee.Type == EmployeeType.Owner;
         }
-
-        public void UpdateEmployee(EmployeeBase Employee)
-        {
-            throw new NotImplementedException();
-        }
+      
     }
 }
