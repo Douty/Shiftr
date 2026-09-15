@@ -21,8 +21,9 @@ namespace Shiftr.Repository
             return employee;
         }
 
-        public async Task<bool> DeleteAsync(EmployeeBase employee)
+        public async Task<bool> DeleteAsync(int Id)
         {
+            var employee = await GetByIdAsync(Id);
             
             if (employee is  null) return false;
             
@@ -32,7 +33,6 @@ namespace Shiftr.Repository
             
         }
 
-        
 
         public async Task<List<EmployeeBase>> GetAllAsync()
         {
