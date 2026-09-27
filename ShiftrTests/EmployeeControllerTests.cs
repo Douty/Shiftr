@@ -5,6 +5,7 @@ using Shiftr.Models;
 
 namespace ShiftrTests;
 
+[Trait("Category", "Unit")]
 public class EmployeeControllerTests
 {
     [Fact]

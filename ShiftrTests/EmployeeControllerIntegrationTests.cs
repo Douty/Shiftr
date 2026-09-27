@@ -9,6 +9,7 @@ using ShiftrTests.fixture;
 
 namespace ShiftrTests;
 
+[Trait("Category", "Integration")]
 public sealed class EmployeeControllerIntegrationTests : IClassFixture<ApiTestFactory>
 {
     private readonly ApiTestFactory _factory;

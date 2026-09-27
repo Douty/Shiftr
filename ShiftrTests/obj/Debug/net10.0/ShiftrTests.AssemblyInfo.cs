@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("ShiftrTests")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+44faca53635cedb5d7a7705879c319d9e2a698b0")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+86c2eb4c628e8b83a1ad6758190018027acd8ba8")]
 [assembly: System.Reflection.AssemblyProductAttribute("ShiftrTests")]
 [assembly: System.Reflection.AssemblyTitleAttribute("ShiftrTests")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
