@@ -1,4 +1,6 @@
 
+using System.Text.Json.Serialization;
+
 namespace Shiftr.Models
 {
     public enum EmployeeType
@@ -7,6 +9,10 @@ namespace Shiftr.Models
         Manager,
         FrontDesk
     }
+    [JsonPolymorphic(TypeDiscriminatorPropertyName = "$employeeType")]
+    [JsonDerivedType(typeof(OwnerModel), "owner")]
+    [JsonDerivedType(typeof(ManagerModel), "manager")]
+    [JsonDerivedType(typeof(FrontDeskAgentModel), "frontDesk")]
     public abstract class EmployeeBase
     {
         public int Id { get; set; }
