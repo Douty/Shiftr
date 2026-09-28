@@ -9,7 +9,7 @@ namespace Shiftr.Interface
         Task<List<EmployeeBase>> GetAllAsync();
         Task<EmployeeBase> AddAsync(EmployeeBase employee);
         Task<EmployeeBase> UpdateAsync(EmployeeBase employee);
-        Task<bool> DeleteAsync(EmployeeBase employee);
+        Task<bool> DeleteAsync(int Id);
         
     }
 }
