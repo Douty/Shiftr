@@ -5,10 +5,10 @@ namespace Shiftr.Models
     public class OrganizationModel
     {
         public int Id {get; set;}
-        public required string Name;
+        public required string Name {get; set;}
 
         public List<OwnerModel> Owners {get; set;} = new();
-        public required List<PropertyModel> Properties = new();
+        public List<PropertyModel> Properties {get; set;} = new();
         
     }
 }

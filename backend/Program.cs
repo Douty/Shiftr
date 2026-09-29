@@ -6,7 +6,8 @@ using Shiftr.Repository;
 using Shiftr.Services;
 
 var builder = WebApplication.CreateBuilder(args);
-
+builder.Services.AddAuthentication();
+builder.Services.AddAuthorization();
 
 builder.Services.AddOpenApi();
 builder.Services.AddControllers()
@@ -15,6 +16,8 @@ builder.Services.AddDbContext<ShiftrDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 builder.Services.AddScoped<IEmployeeRepository, EmployeeRepository>();
 builder.Services.AddScoped<IEmployeeService, EmployeeService>();
+builder.Services.AddScoped<IOrganizationRepository, OrganizationRepository>();
+builder.Services.AddScoped<IOrganizationService, OrganizationService>();
 
 
 
@@ -27,6 +30,8 @@ if (app.Environment.IsDevelopment())
     app.MapOpenApi();
 }
 
+    app.UseAuthentication();
+    app.UseAuthorization();
 app.MapControllers();
 app.UseHttpsRedirection();
 
