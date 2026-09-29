@@ -11,8 +11,7 @@ namespace ShiftrTests.fixture
 {
 public sealed class ApiTestFactory : WebApplicationFactory<Program>, IAsyncLifetime
 {
-    private readonly PostgreSqlContainer _postgres = new PostgreSqlBuilder()
-        .WithImage("postgres:16-alpine")
+    private readonly PostgreSqlContainer _postgres = new PostgreSqlBuilder("postgres:16-alpine")
         .WithDatabase("testdb")
         .WithUsername("testuser")
         .WithPassword("testpass")
