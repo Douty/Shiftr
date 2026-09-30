@@ -20,6 +20,15 @@ namespace Shiftr.Data
         {
             base.OnModelCreating(modelBuilder);
 
+            modelBuilder.Entity<EmployeeBase>()
+                .HasOne<IdentityUser>()
+                .WithMany()
+                .HasForeignKey(employee => employee.IdentityUserId)
+                .OnDelete(DeleteBehavior.SetNull);
+            modelBuilder.Entity<EmployeeBase>()
+                .HasIndex(employee => employee.IdentityUserId)
+                .IsUnique();
+
             var shiftListConverter = new ValueConverter<List<Shift>, string>(
                 shifts => JsonSerializer.Serialize(shifts),
                 json => JsonSerializer.Deserialize<List<Shift>>(json) ?? new List<Shift>());

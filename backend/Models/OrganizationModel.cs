@@ -2,6 +2,12 @@ using System;
 
 namespace Shiftr.Models
 {
+    public enum OrganizationDeleteResult
+        {
+            Deleted,
+            NotFound,
+            HasDependents
+        }
     public class OrganizationModel
     {
         public int Id {get; set;}

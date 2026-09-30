@@ -41,15 +41,23 @@ namespace Shiftr.Repository
             return existingOrganization;
         }
 
-        public async Task<bool> DeleteAsync(int id)
+        public async Task<OrganizationDeleteResult> DeleteAsync(int id)
         {
             var organization = await _context.Organizations
+                .Include(existing => existing.Properties)
+                .Include(existing => existing.Owners)
                 .FirstOrDefaultAsync(existing => existing.Id == id);
 
-            if (organization is null) return false;
+            if (organization is null) return OrganizationDeleteResult.NotFound;
+
+            if (organization.Properties.Count > 0 || organization.Owners.Count > 0)
+            {
+                return OrganizationDeleteResult.HasDependents;
+            }
 
             _context.Organizations.Remove(organization);
-            return await _context.SaveChangesAsync() > 0;
+            await _context.SaveChangesAsync();
+            return OrganizationDeleteResult.Deleted;
         }
 
         public async Task<bool> AddEmployeeAsync(int organizationId, int employeeId, int? propertyId)
@@ -114,5 +122,73 @@ namespace Shiftr.Repository
             await _context.SaveChangesAsync();
             return property;
         }
+
+        public async Task<bool> HasMemberAsync(int organizationId, string identityUserId)
+        {
+            var organization = await GetOrganizationForAccessAsync(organizationId);
+            return organization is not null && HasMember(organization, identityUserId);
+        }
+
+        public async Task<bool> HasAdminAccessAsync(int organizationId, string identityUserId)
+        {
+            var organization = await GetOrganizationForAccessAsync(organizationId);
+            return organization is not null &&
+                (HasOwnerAccess(organization, identityUserId) || organization.Properties
+                    .SelectMany(property => property.Managers)
+                    .Any(manager => manager.IdentityUserId == identityUserId));
+        }
+
+        public async Task<bool> HasOwnerAccessAsync(int organizationId, string identityUserId)
+        {
+            var organization = await GetOrganizationForAccessAsync(organizationId);
+            return organization is not null && HasOwnerAccess(organization, identityUserId);
+        }
+
+        public async Task<int?> GetOrganizationIdForEmployeeAsync(int employeeId)
+        {
+            var ownerOrganizationId = await _context.Employees
+                .OfType<OwnerModel>()
+                .Where(owner => owner.Id == employeeId)
+                .Select(owner => (int?)owner.OrganizationID)
+                .FirstOrDefaultAsync();
+            if (ownerOrganizationId.HasValue) return ownerOrganizationId;
+
+            var propertyId = await _context.Employees
+                .OfType<ManagerModel>()
+                .Where(manager => manager.Id == employeeId)
+                .Select(manager => (int?)manager.PropteryId)
+                .FirstOrDefaultAsync();
+            propertyId ??= await _context.Employees
+                .OfType<FrontDeskAgentModel>()
+                .Where(agent => agent.Id == employeeId)
+                .Select(agent => (int?)agent.PropteryId)
+                .FirstOrDefaultAsync();
+            return propertyId.HasValue
+                ? await GetOrganizationIdForPropertyAsync(propertyId.Value)
+                : null;
+        }
+
+        public async Task<int?> GetOrganizationIdForPropertyAsync(int propertyId) =>
+            await _context.Properties
+                .Where(property => property.Id == propertyId)
+                .Select(property => EF.Property<int?>(property, "OrganizationModelId"))
+                .FirstOrDefaultAsync();
+
+        private Task<OrganizationModel?> GetOrganizationForAccessAsync(int organizationId) =>
+            _context.Organizations
+                .Include(organization => organization.Owners)
+                .Include(organization => organization.Properties)
+                    .ThenInclude(property => property.Managers)
+                .Include(organization => organization.Properties)
+                    .ThenInclude(property => property.FrontDeskAgents)
+                .FirstOrDefaultAsync(organization => organization.Id == organizationId);
+
+        private static bool HasMember(OrganizationModel organization, string identityUserId) =>
+            HasOwnerAccess(organization, identityUserId) || organization.Properties.Any(property =>
+                property.Managers.Any(manager => manager.IdentityUserId == identityUserId) ||
+                property.FrontDeskAgents.Any(agent => agent.IdentityUserId == identityUserId));
+
+        private static bool HasOwnerAccess(OrganizationModel organization, string identityUserId) =>
+            organization.Owners.Any(owner => owner.IdentityUserId == identityUserId);
     }
 }

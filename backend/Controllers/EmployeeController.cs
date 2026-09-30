@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
+using System.Security.Claims;
 using Shiftr.Security;
 using Shiftr.Models;
 using Shiftr.Interface;
@@ -15,16 +16,23 @@ namespace Shiftr.Controllers
             _service = service;
         }
         [HttpGet("{id}")]
+        [Authorize(Policy = AuthorizationPolicies.RegularEmployee)]
         public async Task<ActionResult<EmployeeBase>> GetEmployee(int id)
         {
             var employee = await _service.GetEmployeeById(id);
-            return employee is null ? NotFound() : Ok(employee);
+            if (employee is null) return NotFound();
+            var identityUserId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (identityUserId is null || !await _service.CanAccessEmployee(id, identityUserId)) return Forbid();
+            return Ok(employee);
         }
         [HttpPost("Create")]
         [Authorize(Policy = AuthorizationPolicies.AdminOnly)]
 
         public async Task<ActionResult<EmployeeBase>> CreateEmployee(EmployeeBase Employee)
         {
+            var identityUserId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (identityUserId is null || !await _service.CanCreateEmployee(Employee, identityUserId)) return Forbid();
+
             var EmployeeCreated = await _service.CreateEmployee(Employee);
             return CreatedAtAction(nameof(GetEmployee), new {id = EmployeeCreated.Id}, EmployeeCreated);
         }
@@ -32,6 +40,10 @@ namespace Shiftr.Controllers
         [Authorize(Policy = AuthorizationPolicies.AdminOnly)]
         public async Task<ActionResult<bool>> DeleteEmployee(int Id)
         {
+            if (await _service.GetEmployeeById(Id) is null) return NotFound();
+            var identityUserId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (identityUserId is null || !await _service.CanAccessEmployee(Id, identityUserId)) return Forbid();
+
             return await _service.DeleteEmployee(Id);
         }
         [HttpPost("Update")]
@@ -39,19 +51,25 @@ namespace Shiftr.Controllers
 
         public async Task<ActionResult<EmployeeBase>> UpdateEmployee(EmployeeBase Employee)
         {
+            if (await _service.GetEmployeeById(Employee.Id) is null) return NotFound();
+            var identityUserId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (identityUserId is null || !await _service.CanAccessEmployee(Employee.Id, identityUserId)) return Forbid();
+
             var EmployeeUpdated = await _service.UpdateEmployee(Employee);
-            return EmployeeUpdated;
+            return EmployeeUpdated is null ? NotFound() : Ok(EmployeeUpdated);
         }
-        [HttpPost("IsAdmin")]
-        public ActionResult<bool> IsAdmin(EmployeeBase Employee)
+        [HttpGet("IsAdmin")]
+        [Authorize]
+        public ActionResult<bool> IsAdmin()
         {
-            return Ok(_service.IsAdmin(Employee));
+            return Ok(User.IsInRole(IdentityRoles.Owner) || User.IsInRole(IdentityRoles.Admin));
         }
 
-        [HttpPost("IsOwner")]
-        public ActionResult<bool> IsOwner(EmployeeBase Employee)
+        [HttpGet("IsOwner")]
+        [Authorize]
+        public ActionResult<bool> IsOwner()
         {
-            return Ok(_service.IsOwner(Employee));
+            return Ok(User.IsInRole(IdentityRoles.Owner));
         }
         
 

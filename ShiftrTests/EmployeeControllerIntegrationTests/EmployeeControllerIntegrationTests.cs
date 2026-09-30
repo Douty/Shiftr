@@ -69,14 +69,58 @@ public sealed class EmployeeControllerIntegrationTests : IClassFixture<ApiTestFa
 
         await AddRoleAsync(email, IdentityRoles.Admin);
 
+        int propertyId;
+        int authenticatedOrganizationId;
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var services = scope.ServiceProvider;
+            var userManager = services.GetRequiredService<UserManager<IdentityUser>>();
+            var user = await userManager.FindByEmailAsync(email);
+            Assert.NotNull(user);
+
+            var database = services.GetRequiredService<ShiftrDbContext>();
+            var organization = new OrganizationModel { Name = $"Test Org {Guid.NewGuid():N}" };
+            var property = new PropertyModel { Name = "Test Property" };
+            organization.Properties.Add(property);
+            database.Organizations.Add(organization);
+            await database.SaveChangesAsync();
+
+            database.Employees.Add(new ManagerModel
+            {
+                FirstName = "Test",
+                LastName = "Admin",
+                Email = email,
+                PhoneNumber = "555-0100",
+                PropteryId = property.Id,
+                IdentityUserId = user!.Id
+            });
+            await database.SaveChangesAsync();
+            propertyId = property.Id;
+            authenticatedOrganizationId = organization.Id;
+        }
+
         var authenticatedClient = _factory.CreateClient();
         await SetBearerTokenAsync(authenticatedClient, email, password);
+        authenticatedClient.DefaultRequestHeaders.Add("X-Test-Property-Id", propertyId.ToString());
+        authenticatedClient.DefaultRequestHeaders.Add("X-Test-Organization-Id", authenticatedOrganizationId.ToString());
         return authenticatedClient;
+    }
+
+    private async Task<HttpClient> CreateRoleClientAsync(string role)
+    {
+        var email = $"{Guid.NewGuid():N}@example.com";
+        const string password = "Secure-Pass123!";
+        var client = _factory.CreateClient();
+        using var registerResponse = await client.PostAsJsonAsync("/register", new { email, password });
+        Assert.Equal(HttpStatusCode.OK, registerResponse.StatusCode);
+        await AddRoleAsync(email, role);
+        await SetBearerTokenAsync(client, email, password);
+        return client;
     }
 
     private static async Task<ManagerModel> CreateManagerAsync(HttpClient client)
     {
-        var employee = CreateManager();
+        var employee = CreateManager(client);
         using var response = await client.PostAsJsonAsync<EmployeeBase>("/api/Employee/Create", employee);
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
         using var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
@@ -93,25 +137,13 @@ public sealed class EmployeeControllerIntegrationTests : IClassFixture<ApiTestFa
         PropteryId = 1
     };
 
-    private static EmployeeBase CreateEmployee(EmployeeType type) => type switch
+    private static ManagerModel CreateManager(HttpClient client) => new()
     {
-        EmployeeType.Owner => new OwnerModel
-        {
-            FirstName = "Taylor",
-            LastName = "Reed",
-            Email = "taylor@example.com",
-            PhoneNumber = "555-0100",
-            OrganizationID = 1
-        },
-        EmployeeType.Manager => CreateManager(),
-        _ => new FrontDeskAgentModel
-        {
-            FirstName = "Taylor",
-            LastName = "Reed",
-            Email = "taylor@example.com",
-            PhoneNumber = "555-0100",
-            PropteryId = 1
-        }
+        FirstName = "Taylor",
+        LastName = "Reed",
+        Email = "taylor@example.com",
+        PhoneNumber = "555-0100",
+        PropteryId = int.Parse(client.DefaultRequestHeaders.GetValues("X-Test-Property-Id").Single())
     };
 
     [Fact]
@@ -120,7 +152,7 @@ public sealed class EmployeeControllerIntegrationTests : IClassFixture<ApiTestFa
         await ResetEmployeesAsync();
         using var client = await CreateAdminClientAsync();
         using var createResponse = await client.PostAsJsonAsync<EmployeeBase>(
-            "/api/Employee/Create", CreateManager());
+            "/api/Employee/Create", CreateManager(client));
 
         Assert.Equal(HttpStatusCode.Created, createResponse.StatusCode);
         using var createdDocument = JsonDocument.Parse(await createResponse.Content.ReadAsStringAsync());
@@ -150,11 +182,42 @@ public sealed class EmployeeControllerIntegrationTests : IClassFixture<ApiTestFa
     }
 
     [Fact]
-    public async Task GetEmployee_ReturnsNotFoundWhenEmployeeDoesNotExist()
+    public async Task GetEmployee_RequiresAuthorization()
     {
         using var client = _factory.CreateClient();
 
         using var response = await client.GetAsync("/api/Employee/999999");
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task AdminCannotAccessAnotherOrganizationsData()
+    {
+        using var firstAdmin = await CreateAdminClientAsync();
+        using var secondAdmin = await CreateAdminClientAsync();
+        var employee = await CreateManagerAsync(firstAdmin);
+        var organizationId = firstAdmin.DefaultRequestHeaders
+            .GetValues("X-Test-Organization-Id").Single();
+
+        using var employeeReadResponse = await secondAdmin.GetAsync($"/api/Employee/{employee.Id}");
+        using var readResponse = await secondAdmin.GetAsync($"/api/Organization/{organizationId}");
+        using var addPropertyResponse = await secondAdmin.PostAsJsonAsync(
+            $"/api/Organization/{organizationId}/properties",
+            new PropertyModel { Name = "Unauthorized Property" });
+
+    Assert.Equal(HttpStatusCode.Forbidden, employeeReadResponse.StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, readResponse.StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, addPropertyResponse.StatusCode);
+    }
+
+    [Fact]
+    public async Task UpdateEmployee_ReturnsNotFoundWhenEmployeeDoesNotExist()
+    {
+        using var client = await CreateAdminClientAsync();
+
+        using var response = await client.PostAsJsonAsync<EmployeeBase>(
+            "/api/Employee/Update", CreateManager(client));
 
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
@@ -182,9 +245,15 @@ public sealed class EmployeeControllerIntegrationTests : IClassFixture<ApiTestFa
     [InlineData(EmployeeType.FrontDesk, false)]
     public async Task IsAdmin_ReturnsExpectedResult(EmployeeType type, bool expected)
     {
-        using var client = _factory.CreateClient();
+        var role = type switch
+        {
+            EmployeeType.Owner => IdentityRoles.Owner,
+            EmployeeType.Manager => IdentityRoles.Admin,
+            _ => IdentityRoles.FrontDesk
+        };
+        using var client = await CreateRoleClientAsync(role);
 
-        using var response = await client.PostAsJsonAsync("/api/Employee/IsAdmin", CreateEmployee(type));
+        using var response = await client.GetAsync("/api/Employee/IsAdmin");
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.Equal(expected, await response.Content.ReadFromJsonAsync<bool>());
@@ -196,9 +265,10 @@ public sealed class EmployeeControllerIntegrationTests : IClassFixture<ApiTestFa
     [InlineData(EmployeeType.FrontDesk, false)]
     public async Task IsOwner_ReturnsExpectedResult(EmployeeType type, bool expected)
     {
-        using var client = _factory.CreateClient();
+        var role = type == EmployeeType.Owner ? IdentityRoles.Owner : IdentityRoles.Admin;
+        using var client = await CreateRoleClientAsync(role);
 
-        using var response = await client.PostAsJsonAsync("/api/Employee/IsOwner", CreateEmployee(type));
+        using var response = await client.GetAsync("/api/Employee/IsOwner");
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.Equal(expected, await response.Content.ReadFromJsonAsync<bool>());
@@ -274,9 +344,28 @@ public sealed class EmployeeControllerIntegrationTests : IClassFixture<ApiTestFa
 
         await AddRoleAsync(email, IdentityRoles.Owner);
         await SetBearerTokenAsync(client, email, password);
+        using var scope = _factory.Services.CreateScope();
+        var userManager = scope.ServiceProvider.GetRequiredService<UserManager<IdentityUser>>();
+        var ownerUser = await userManager.FindByEmailAsync(email);
+        Assert.NotNull(ownerUser);
         using var ownerCreate = await client.PostAsJsonAsync(
             "/api/Organization",
-            new OrganizationModel { Name = "Owner Org" });
+            new OrganizationModel
+            {
+                Name = "Owner Org",
+                Owners =
+                [
+                    new OwnerModel
+                    {
+                        FirstName = "Test",
+                        LastName = "Owner",
+                        Email = email,
+                        PhoneNumber = "555-0101",
+                        OrganizationID = 0,
+                        IdentityUserId = ownerUser!.Id
+                    }
+                ]
+            });
         Assert.Equal(HttpStatusCode.Created, ownerCreate.StatusCode);
     }
 }

@@ -44,13 +44,27 @@ namespace Shiftr.Repository
             return await _context.Employees.FirstOrDefaultAsync(e => e.Id == Id);
         }
 
+        public Task<bool> IsLinkedToIdentityAsync(int employeeId, string identityUserId) =>
+            _context.Employees.AnyAsync(employee =>
+                employee.Id == employeeId && employee.IdentityUserId == identityUserId);
+
        
-        public async Task<EmployeeBase> UpdateAsync(EmployeeBase employee)
+        public async Task<EmployeeBase?> UpdateAsync(EmployeeBase employee)
         {
-            _context.Employees.Update(employee);
+            var existingEmployee = await _context.Employees.FirstOrDefaultAsync(
+                existing => existing.Id == employee.Id);
+            if (existingEmployee is null || existingEmployee.GetType() != employee.GetType())
+            {
+                return null;
+            }
+
+            existingEmployee.FirstName = employee.FirstName;
+            existingEmployee.LastName = employee.LastName;
+            existingEmployee.Email = employee.Email;
+            existingEmployee.PhoneNumber = employee.PhoneNumber;
+            existingEmployee.HireDate = employee.HireDate;
             await _context.SaveChangesAsync();
-            return employee;
-            
+            return existingEmployee;
         }
     }
 }

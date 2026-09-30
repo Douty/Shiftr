@@ -21,7 +21,7 @@ namespace Shiftr.Services
         public Task<OrganizationModel?> UpdateOrganization(OrganizationModel organization) =>
             _repository.UpdateAsync(organization);
 
-        public Task<bool> DeleteOrganization(int id) =>
+        public Task<OrganizationDeleteResult> DeleteOrganization(int id) =>
             _repository.DeleteAsync(id);
 
         public Task<bool> AddEmployeeToOrganization(int organizationId, int employeeId, int? propertyId) =>
@@ -29,5 +29,14 @@ namespace Shiftr.Services
 
         public Task<PropertyModel?> AddPropertyToOrganization(int organizationId, PropertyModel property) =>
             _repository.AddPropertyAsync(organizationId, property);
+
+        public Task<bool> HasMember(int organizationId, string identityUserId) =>
+            _repository.HasMemberAsync(organizationId, identityUserId);
+
+        public Task<bool> HasAdminAccess(int organizationId, string identityUserId) =>
+            _repository.HasAdminAccessAsync(organizationId, identityUserId);
+
+        public Task<bool> HasOwnerAccess(int organizationId, string identityUserId) =>
+            _repository.HasOwnerAccessAsync(organizationId, identityUserId);
     }
 }

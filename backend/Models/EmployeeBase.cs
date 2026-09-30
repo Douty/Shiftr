@@ -22,6 +22,7 @@ namespace Shiftr.Models
         
         public required string Email { get; set; }
         public required string PhoneNumber { get; set; }
+        public string? IdentityUserId { get; set; }
         public DateTime HireDate { get; set; }
         public abstract EmployeeType Type {get; }
         

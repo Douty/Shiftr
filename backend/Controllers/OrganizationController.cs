@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
 using Shiftr.DTOs;
 using Shiftr.Interface;
 using Shiftr.Models;
@@ -11,6 +12,7 @@ namespace Shiftr.Controllers
     [Route("api/[controller]")]
     public class OrganizationController : ControllerBase
     {
+        
         private readonly IOrganizationService _service;
 
         public OrganizationController(IOrganizationService service)
@@ -23,13 +25,20 @@ namespace Shiftr.Controllers
         public async Task<ActionResult<OrganizationModel>> GetOrganization(int id)
         {
             var organization = await _service.GetOrganizationById(id);
-            return organization is null ? NotFound() : Ok(organization);
+            if (organization is null) return NotFound();
+            var identityUserId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (identityUserId is null || !await _service.HasMember(id, identityUserId)) return Forbid();
+            return Ok(organization);
         }
 
         [HttpPost]
         [Authorize(Policy = AuthorizationPolicies.OwnerOnly)]
         public async Task<ActionResult<OrganizationModel>> CreateOrganization(OrganizationModel organization)
         {
+            var identityUserId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (identityUserId is null) return Unauthorized();
+            if (!organization.Owners.Any(owner => owner.IdentityUserId == identityUserId)) return BadRequest();
+
             var createdOrganization = await _service.CreateOrganization(organization);
             return CreatedAtAction(nameof(GetOrganization), new { id = createdOrganization.Id }, createdOrganization);
         }
@@ -39,6 +48,9 @@ namespace Shiftr.Controllers
         public async Task<ActionResult<OrganizationModel>> UpdateOrganization(int id, OrganizationModel organization)
         {
             if (id != organization.Id) return BadRequest();
+            if (await _service.GetOrganizationById(id) is null) return NotFound();
+            var identityUserId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (identityUserId is null || !await _service.HasOwnerAccess(id, identityUserId)) return Forbid();
 
             var updatedOrganization = await _service.UpdateOrganization(organization);
             return updatedOrganization is null ? NotFound() : Ok(updatedOrganization);
@@ -48,13 +60,27 @@ namespace Shiftr.Controllers
         [Authorize(Policy = AuthorizationPolicies.OwnerOnly)]
         public async Task<IActionResult> DeleteOrganization(int id)
         {
-            return await _service.DeleteOrganization(id) ? NoContent() : NotFound();
+            if (await _service.GetOrganizationById(id) is null) return NotFound();
+            var identityUserId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (identityUserId is null || !await _service.HasOwnerAccess(id, identityUserId)) return Forbid();
+
+            return await _service.DeleteOrganization(id) switch
+            {
+                OrganizationDeleteResult.Deleted => NoContent(),
+                OrganizationDeleteResult.NotFound => NotFound(),
+                OrganizationDeleteResult.HasDependents => Conflict(),
+                _ => throw new InvalidOperationException("Unknown organization deletion result.")
+            };
         }
 
         [HttpPost("{id:int}/employees")]
         [Authorize(Policy = AuthorizationPolicies.AdminOnly)]
         public async Task<IActionResult> AddEmployee(int id, AddOrganizationEmployeeRequest request)
         {
+            if (await _service.GetOrganizationById(id) is null) return NotFound();
+            var identityUserId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (identityUserId is null || !await _service.HasAdminAccess(id, identityUserId)) return Forbid();
+
             var added = await _service.AddEmployeeToOrganization(id, request.EmployeeId, request.PropertyId);
             return added ? NoContent() : NotFound();
         }
@@ -63,8 +89,14 @@ namespace Shiftr.Controllers
         [Authorize(Policy = AuthorizationPolicies.AdminOnly)]
         public async Task<ActionResult<PropertyModel>> AddProperty(int id, PropertyModel property)
         {
+            if (await _service.GetOrganizationById(id) is null) return NotFound();
+            var identityUserId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (identityUserId is null || !await _service.HasAdminAccess(id, identityUserId)) return Forbid();
+
             var addedProperty = await _service.AddPropertyToOrganization(id, property);
             return addedProperty is null ? NotFound() : Ok(addedProperty);
         }
+
+        
     }
 }

@@ -1,7 +1,10 @@
 using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
+using Microsoft.AspNetCore.Http;
 using Shiftr.Controllers;
 using Shiftr.Interface;
 using Shiftr.Models;
+using Shiftr.Security;
 
 namespace ShiftrTests;
 
@@ -59,10 +62,10 @@ public class EmployeeControllerUnitTests
             return Task.FromResult(EmployeeToReturn ?? employee);
         }
 
-        public Task<EmployeeBase> UpdateEmployee(EmployeeBase employee)
+        public Task<EmployeeBase?> UpdateEmployee(EmployeeBase employee)
         {
             EmployeePassedToUpdate = employee;
-            return Task.FromResult(EmployeeToReturn ?? employee);
+            return Task.FromResult<EmployeeBase?>(EmployeeToReturn);
         }
 
         public Task<bool> DeleteEmployee(int id)
@@ -75,6 +78,25 @@ public class EmployeeControllerUnitTests
             employee.Type is EmployeeType.Manager or EmployeeType.Owner;
 
         public bool IsOwner(EmployeeBase employee) => employee.Type == EmployeeType.Owner;
+
+        public Task<bool> CanAccessEmployee(int employeeId, string identityUserId) => Task.FromResult(true);
+
+        public Task<bool> CanCreateEmployee(EmployeeBase employee, string identityUserId) => Task.FromResult(true);
+    }
+
+    private static EmployeeController CreateController(IEmployeeService service, params string[] roles)
+    {
+        var claims = new List<Claim> { new(ClaimTypes.NameIdentifier, "identity-1") };
+        claims.AddRange(roles.Select(role => new Claim(ClaimTypes.Role, role)));
+        var controller = new EmployeeController(service);
+        controller.ControllerContext = new ControllerContext
+        {
+            HttpContext = new DefaultHttpContext
+            {
+                User = new ClaimsPrincipal(new ClaimsIdentity(claims, "test"))
+            }
+        };
+        return controller;
     }
 
     [Fact]
@@ -82,7 +104,7 @@ public class EmployeeControllerUnitTests
     {
         var employee = CreateManager();
         var service = new FakeEmployeeService { EmployeeToReturn = employee };
-        var controller = new EmployeeController(service);
+        var controller = CreateController(service);
 
         var result = await controller.CreateEmployee(employee);
 
@@ -98,7 +120,7 @@ public class EmployeeControllerUnitTests
     {
         var employee = CreateManager();
         var service = new FakeEmployeeService { EmployeeToReturn = employee };
-        var controller = new EmployeeController(service);
+        var controller = CreateController(service);
 
         var result = await controller.GetEmployee(employee.Id);
 
@@ -111,7 +133,7 @@ public class EmployeeControllerUnitTests
     public async Task GetEmployee_ReturnsNotFound_WhenEmployeeDoesNotExist()
     {
         var service = new FakeEmployeeService();
-        var controller = new EmployeeController(service);
+        var controller = CreateController(service);
 
         var result = await controller.GetEmployee(404);
 
@@ -124,19 +146,35 @@ public class EmployeeControllerUnitTests
     {
         var employee = CreateManager();
         var service = new FakeEmployeeService { EmployeeToReturn = employee };
-        var controller = new EmployeeController(service);
+        var controller = CreateController(service);
 
         var result = await controller.UpdateEmployee(employee);
 
-        Assert.Same(employee, result.Value);
+        var okResult = Assert.IsType<OkObjectResult>(result.Result);
+        Assert.Same(employee, okResult.Value);
         Assert.Same(employee, service.EmployeePassedToUpdate);
+    }
+
+    [Fact]
+    public async Task UpdateEmployee_ReturnsNotFound_WhenEmployeeDoesNotExist()
+    {
+        var service = new FakeEmployeeService();
+        var controller = CreateController(service);
+
+        var result = await controller.UpdateEmployee(CreateManager());
+
+        Assert.IsType<NotFoundResult>(result.Result);
     }
 
     [Fact]
     public async Task DeleteEmployee_ReturnsServiceResult_AndPassesEmployeeId()
     {
-        var service = new FakeEmployeeService { DeleteResult = true };
-        var controller = new EmployeeController(service);
+        var service = new FakeEmployeeService
+        {
+            DeleteResult = true,
+            EmployeeToReturn = CreateManager()
+        };
+        var controller = CreateController(service);
 
         var result = await controller.DeleteEmployee(17);
 
@@ -150,9 +188,11 @@ public class EmployeeControllerUnitTests
     [InlineData(EmployeeType.FrontDesk, false)]
     public void IsAdmin_ReturnsServiceResult(EmployeeType employeeType, bool expected)
     {
-        var controller = new EmployeeController(new FakeEmployeeService());
+        var controller = CreateController(
+            new FakeEmployeeService(),
+            employeeType == EmployeeType.FrontDesk ? IdentityRoles.FrontDesk : IdentityRoles.Admin);
 
-        var result = controller.IsAdmin(CreateEmployee(employeeType));
+        var result = controller.IsAdmin();
 
         var okResult = Assert.IsType<OkObjectResult>(result.Result);
         Assert.Equal(expected, okResult.Value);
@@ -164,9 +204,11 @@ public class EmployeeControllerUnitTests
     [InlineData(EmployeeType.FrontDesk, false)]
     public void IsOwner_ReturnsServiceResult(EmployeeType employeeType, bool expected)
     {
-        var controller = new EmployeeController(new FakeEmployeeService());
+        var controller = CreateController(
+            new FakeEmployeeService(),
+            employeeType == EmployeeType.Owner ? IdentityRoles.Owner : IdentityRoles.Admin);
 
-        var result = controller.IsOwner(CreateEmployee(employeeType));
+        var result = controller.IsOwner();
 
         var okResult = Assert.IsType<OkObjectResult>(result.Result);
         Assert.Equal(expected, okResult.Value);
