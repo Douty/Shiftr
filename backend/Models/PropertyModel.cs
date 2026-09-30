@@ -2,6 +2,13 @@
 
 namespace Shiftr.Models
 {
+    public enum PropertyDeleteResult
+    {
+        Deleted,
+        NotFound,
+        HasEmployees
+    }
+
     public class PropertyModel
     {
         public int Id { get; set; }

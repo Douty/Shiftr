@@ -1,0 +1,63 @@
+using Microsoft.EntityFrameworkCore;
+using Shiftr.Data;
+using Shiftr.Interface;
+using Shiftr.Models;
+
+namespace Shiftr.Repository
+{
+    public class PropertyRepository : IPropertyRepository
+    {
+        private readonly ShiftrDbContext _context;
+
+        public PropertyRepository(ShiftrDbContext context)
+        {
+            _context = context;
+        }
+
+        public Task<PropertyModel?> GetByIdAsync(int id) =>
+            _context.Properties.FirstOrDefaultAsync(property => property.Id == id);
+
+        public async Task<PropertyModel?> AddAsync(int organizationId, PropertyModel property)
+        {
+            var organization = await _context.Organizations
+                .Include(existing => existing.Properties)
+                .FirstOrDefaultAsync(existing => existing.Id == organizationId);
+
+            if (organization is null) return null;
+
+            organization.Properties.Add(property);
+            await _context.SaveChangesAsync();
+            return property;
+        }
+
+        public async Task<PropertyModel?> UpdateAsync(PropertyModel property)
+        {
+            var existingProperty = await _context.Properties
+                .FirstOrDefaultAsync(existing => existing.Id == property.Id);
+
+            if (existingProperty is null) return null;
+
+            existingProperty.Name = property.Name;
+            await _context.SaveChangesAsync();
+            return existingProperty;
+        }
+
+        public async Task<PropertyDeleteResult> DeleteAsync(int id)
+        {
+            var property = await _context.Properties
+                .Include(existing => existing.Managers)
+                .Include(existing => existing.FrontDeskAgents)
+                .FirstOrDefaultAsync(existing => existing.Id == id);
+
+            if (property is null) return PropertyDeleteResult.NotFound;
+            if (property.Managers.Count > 0 || property.FrontDeskAgents.Count > 0)
+            {
+                return PropertyDeleteResult.HasEmployees;
+            }
+
+            _context.Properties.Remove(property);
+            await _context.SaveChangesAsync();
+            return PropertyDeleteResult.Deleted;
+        }
+    }
+}
