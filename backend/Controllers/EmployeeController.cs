@@ -1,4 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
+using Shiftr.Security;
 using Shiftr.Models;
 using Shiftr.Interface;
 namespace Shiftr.Controllers
@@ -19,17 +21,22 @@ namespace Shiftr.Controllers
             return employee is null ? NotFound() : Ok(employee);
         }
         [HttpPost("Create")]
+        [Authorize(Policy = AuthorizationPolicies.AdminOnly)]
+
         public async Task<ActionResult<EmployeeBase>> CreateEmployee(EmployeeBase Employee)
         {
             var EmployeeCreated = await _service.CreateEmployee(Employee);
             return CreatedAtAction(nameof(GetEmployee), new {id = EmployeeCreated.Id}, EmployeeCreated);
         }
         [HttpDelete("Delete/{id}")]
+        [Authorize(Policy = AuthorizationPolicies.AdminOnly)]
         public async Task<ActionResult<bool>> DeleteEmployee(int Id)
         {
             return await _service.DeleteEmployee(Id);
         }
         [HttpPost("Update")]
+        [Authorize(Policy = AuthorizationPolicies.AdminOnly)]
+
         public async Task<ActionResult<EmployeeBase>> UpdateEmployee(EmployeeBase Employee)
         {
             var EmployeeUpdated = await _service.UpdateEmployee(Employee);

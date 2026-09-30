@@ -36,7 +36,7 @@ public sealed class ApiTestFactory : WebApplicationFactory<Program>, IAsyncLifet
 
         using var scope = Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<ShiftrDbContext>();
-        await db.Database.EnsureCreatedAsync();
+        await db.Database.MigrateAsync();
     }
 
     public new async Task DisposeAsync()

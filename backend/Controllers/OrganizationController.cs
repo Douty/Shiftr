@@ -3,12 +3,12 @@ using Microsoft.AspNetCore.Mvc;
 using Shiftr.DTOs;
 using Shiftr.Interface;
 using Shiftr.Models;
+using Shiftr.Security;
 
 namespace Shiftr.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    [Authorize(Roles = nameof(EmployeeType.Owner))]
     public class OrganizationController : ControllerBase
     {
         private readonly IOrganizationService _service;
@@ -19,6 +19,7 @@ namespace Shiftr.Controllers
         }
 
         [HttpGet("{id:int}")]
+        [Authorize(Policy = AuthorizationPolicies.RegularEmployee)]
         public async Task<ActionResult<OrganizationModel>> GetOrganization(int id)
         {
             var organization = await _service.GetOrganizationById(id);
@@ -26,6 +27,7 @@ namespace Shiftr.Controllers
         }
 
         [HttpPost]
+        [Authorize(Policy = AuthorizationPolicies.OwnerOnly)]
         public async Task<ActionResult<OrganizationModel>> CreateOrganization(OrganizationModel organization)
         {
             var createdOrganization = await _service.CreateOrganization(organization);
@@ -33,6 +35,7 @@ namespace Shiftr.Controllers
         }
 
         [HttpPut("{id:int}")]
+        [Authorize(Policy = AuthorizationPolicies.OwnerOnly)]
         public async Task<ActionResult<OrganizationModel>> UpdateOrganization(int id, OrganizationModel organization)
         {
             if (id != organization.Id) return BadRequest();
@@ -42,12 +45,14 @@ namespace Shiftr.Controllers
         }
 
         [HttpDelete("{id:int}")]
+        [Authorize(Policy = AuthorizationPolicies.OwnerOnly)]
         public async Task<IActionResult> DeleteOrganization(int id)
         {
             return await _service.DeleteOrganization(id) ? NoContent() : NotFound();
         }
 
         [HttpPost("{id:int}/employees")]
+        [Authorize(Policy = AuthorizationPolicies.AdminOnly)]
         public async Task<IActionResult> AddEmployee(int id, AddOrganizationEmployeeRequest request)
         {
             var added = await _service.AddEmployeeToOrganization(id, request.EmployeeId, request.PropertyId);
@@ -55,6 +60,7 @@ namespace Shiftr.Controllers
         }
 
         [HttpPost("{id:int}/properties")]
+        [Authorize(Policy = AuthorizationPolicies.AdminOnly)]
         public async Task<ActionResult<PropertyModel>> AddProperty(int id, PropertyModel property)
         {
             var addedProperty = await _service.AddPropertyToOrganization(id, property);

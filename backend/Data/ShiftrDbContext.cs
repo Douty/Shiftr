@@ -1,4 +1,6 @@
 using System.Text.Json;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
@@ -6,7 +8,7 @@ using Shiftr.Models;
 
 namespace Shiftr.Data
 {
-    public class ShiftrDbContext : DbContext
+    public class ShiftrDbContext : IdentityDbContext<IdentityUser>
     {
         public ShiftrDbContext(DbContextOptions<ShiftrDbContext> options) : base(options) {}
 
@@ -16,6 +18,8 @@ namespace Shiftr.Data
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
+            base.OnModelCreating(modelBuilder);
+
             var shiftListConverter = new ValueConverter<List<Shift>, string>(
                 shifts => JsonSerializer.Serialize(shifts),
                 json => JsonSerializer.Deserialize<List<Shift>>(json) ?? new List<Shift>());
