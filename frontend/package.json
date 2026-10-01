@@ -8,7 +8,7 @@
     "build": "tsc -b && vite build",
     "lint": "oxlint",
     "preview": "vite preview",
-    "dev:react": "vite", 
+    "dev:react": "vite",
     "dev:dotnet": "dotnet watch run --project ../backend/backend.csproj",
     "start:both": "concurrently \"npm run dev:react\" \"npm run dev:dotnet\""
   },
@@ -19,6 +19,7 @@
   "devDependencies": {
     "@babel/core": "^7.29.7",
     "@rolldown/plugin-babel": "^0.2.3",
+    "@tailwindcss/vite": "^4.3.3",
     "@types/babel__core": "^7.20.5",
     "@types/node": "^24.13.3",
     "@types/react": "^19.2.18",
@@ -27,6 +28,7 @@
     "babel-plugin-react-compiler": "^1.0.0",
     "concurrently": "^10.0.5",
     "oxlint": "^1.79.0",
+    "tailwindcss": "^4.3.3",
     "typescript": "~6.0.2",
     "vite": "^8.2.2"
   }
