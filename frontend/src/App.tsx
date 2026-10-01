@@ -2,8 +2,13 @@ import './App.css'
 import AboutSection from './components/Landing/AboutSection'
 import BenefitsSection from './components/Landing/BenefitsSection'
 import HeroSection from './components/Landing/HeroSection'
+import AuthPage from './components/Auth/AuthPage'
 
 function App() {
+  if (window.location.pathname.startsWith('/sign-in/')) {
+    return <AuthPage />
+  }
+
   return (
     <div className="min-h-dvh bg-[#F5E9E2] pb-[env(safe-area-inset-bottom)] pt-[env(safe-area-inset-top)] 
     font-['Inter',system-ui,sans-serif] text-lg leading-relaxed text-[#0B0014] antialiased">
