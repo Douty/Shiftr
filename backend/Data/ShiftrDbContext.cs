@@ -13,6 +13,7 @@ namespace Shiftr.Data
         public ShiftrDbContext(DbContextOptions<ShiftrDbContext> options) : base(options) {}
 
         public DbSet<EmployeeBase> Employees => Set<EmployeeBase>();
+        public DbSet<ResidentModel> Residents => Set<ResidentModel>();
         public DbSet<PropertyModel> Properties => Set<PropertyModel>();
         public DbSet<OrganizationModel> Organizations => Set<OrganizationModel>();
         public DbSet<AmenityTypeModel> Amenities => Set<AmenityTypeModel>();
@@ -36,6 +37,20 @@ namespace Shiftr.Data
                 .IsUnique();
             modelBuilder.Entity<PropertyModel>()
                 .HasIndex(property => property.EmployeeInviteId)
+                .IsUnique();
+
+            modelBuilder.Entity<ResidentModel>()
+                .HasOne(resident => resident.Property)
+                .WithMany(property => property.Residents)
+                .HasForeignKey(resident => resident.PropertyId)
+                .OnDelete(DeleteBehavior.Cascade);
+            modelBuilder.Entity<ResidentModel>()
+                .HasOne<IdentityUser>()
+                .WithMany()
+                .HasForeignKey(resident => resident.IdentityUserId)
+                .OnDelete(DeleteBehavior.SetNull);
+            modelBuilder.Entity<ResidentModel>()
+                .HasIndex(resident => resident.IdentityUserId)
                 .IsUnique();
 
             modelBuilder.Entity<AmenityTypeModel>()

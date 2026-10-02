@@ -19,7 +19,9 @@ builder.Services.AddAuthorization(options =>
     options.AddPolicy(AuthorizationPolicies.AdminOnly, policy =>
         policy.RequireRole(IdentityRoles.Owner, IdentityRoles.Admin));
     options.AddPolicy(AuthorizationPolicies.RegularEmployee, policy =>
-        policy.RequireRole(IdentityRoles.All.ToArray()));
+        policy.RequireRole(IdentityRoles.Employees.ToArray()));
+    options.AddPolicy(AuthorizationPolicies.ResidentOnly, policy =>
+        policy.RequireRole(IdentityRoles.Resident));
 });
 
 builder.Services.AddOpenApi();
@@ -29,6 +31,8 @@ builder.Services.AddDbContext<ShiftrDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 builder.Services.AddScoped<IEmployeeRepository, EmployeeRepository>();
 builder.Services.AddScoped<IEmployeeService, EmployeeService>();
+builder.Services.AddScoped<IResidentRepository, ResidentRepository>();
+builder.Services.AddScoped<IResidentService, ResidentService>();
 builder.Services.AddScoped<IOrganizationRepository, OrganizationRepository>();
 builder.Services.AddScoped<IOrganizationService, OrganizationService>();
 builder.Services.AddScoped<IPropertyRepository, PropertyRepository>();
