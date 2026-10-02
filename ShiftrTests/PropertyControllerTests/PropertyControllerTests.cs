@@ -30,6 +30,9 @@ public class PropertyControllerTests
 
         public Task<PropertyModel?> GetPropertyById(int id) => Task.FromResult(PropertyToReturn);
 
+        public Task<bool> IsInviteCodeValidAsync(string inviteCode, CancellationToken cancellationToken = default) =>
+            Task.FromResult(false);
+
         public Task<PropertyModel?> CreateProperty(int organizationId, PropertyModel property)
         {
             CreatedOrganizationId = organizationId;
