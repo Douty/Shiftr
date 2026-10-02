@@ -43,6 +43,8 @@ namespace Shiftr.Repository
 
             existingResident.FirstName = resident.FirstName;
             existingResident.LastName = resident.LastName;
+            existingResident.AllowedGuests = resident.AllowedGuests;
+            existingResident.CallToNotify = resident.CallToNotify;
             await _context.SaveChangesAsync(cancellationToken);
             return existingResident;
         }

@@ -385,6 +385,13 @@ namespace backend.Data.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
+                    b.Property<string>("AllowedGuests")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<bool>("CallToNotify")
+                        .HasColumnType("boolean");
+
                     b.Property<string>("FirstName")
                         .IsRequired()
                         .HasColumnType("text");

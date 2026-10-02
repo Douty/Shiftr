@@ -53,6 +53,19 @@ namespace Shiftr.Data
                 .HasIndex(resident => resident.IdentityUserId)
                 .IsUnique();
 
+            var allowedGuestsConverter = new ValueConverter<List<string>, string>(
+                guests => JsonSerializer.Serialize(guests),
+                json => JsonSerializer.Deserialize<List<string>>(json) ?? new List<string>());
+            var allowedGuestsComparer = new ValueComparer<List<string>>(
+                (left, right) => left != null && right != null && left.SequenceEqual(right),
+                guests => guests.Aggregate(0, (hash, guest) => HashCode.Combine(hash, guest)),
+                guests => guests.ToList());
+
+            modelBuilder.Entity<ResidentModel>()
+                .Property(resident => resident.AllowedGuests)
+                .HasConversion(allowedGuestsConverter)
+                .Metadata.SetValueComparer(allowedGuestsComparer);
+
             modelBuilder.Entity<AmenityTypeModel>()
                 .HasOne(amenity => amenity.Property)
                 .WithMany(property => property.Amenities)

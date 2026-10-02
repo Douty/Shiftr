@@ -63,6 +63,38 @@ namespace Shiftr.Controllers
             return updatedResident is null ? NotFound() : Ok(updatedResident);
         }
 
+        [HttpPost("{residentId:int}/allowed-guests")]
+        public async Task<ActionResult<ResidentModel>> AddAllowedGuest(int propertyId, int residentId, [FromBody] string guestName, CancellationToken cancellationToken)
+        {
+            if (string.IsNullOrWhiteSpace(guestName)) return BadRequest();
+            var access = await CheckAdminAccess(propertyId);
+            if (access is not null) return access;
+
+            var resident = await _residentService.AddAllowedGuest(propertyId, residentId, guestName, cancellationToken);
+            return resident is null ? NotFound() : Ok(resident);
+        }
+
+        [HttpDelete("{residentId:int}/allowed-guests")]
+        public async Task<ActionResult<ResidentModel>> RemoveAllowedGuest(int propertyId, int residentId, [FromQuery] string guestName, CancellationToken cancellationToken)
+        {
+            if (string.IsNullOrWhiteSpace(guestName)) return BadRequest();
+            var access = await CheckAdminAccess(propertyId);
+            if (access is not null) return access;
+
+            var resident = await _residentService.RemoveAllowedGuest(propertyId, residentId, guestName, cancellationToken);
+            return resident is null ? NotFound() : Ok(resident);
+        }
+
+        [HttpPut("{residentId:int}/call-to-notify")]
+        public async Task<ActionResult<ResidentModel>> SetCallToNotify(int propertyId, int residentId, [FromBody] bool callToNotify, CancellationToken cancellationToken)
+        {
+            var access = await CheckAdminAccess(propertyId);
+            if (access is not null) return access;
+
+            var resident = await _residentService.SetCallToNotify(propertyId, residentId, callToNotify, cancellationToken);
+            return resident is null ? NotFound() : Ok(resident);
+        }
+
         [HttpDelete("{residentId:int}")]
         public async Task<IActionResult> DeleteResident(int propertyId, int residentId, CancellationToken cancellationToken)
         {
