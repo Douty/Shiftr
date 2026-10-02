@@ -50,5 +50,8 @@ namespace Shiftr.Services
 
         public Task<bool> CanManageOrganization(int organizationId, string identityUserId) =>
             _organizationRepository.HasAdminAccessAsync(organizationId, identityUserId);
+
+        public Task<bool> CanManageReservations(int propertyId, string identityUserId, CancellationToken cancellationToken = default) =>
+            _repository.IsFrontDeskAssignedToPropertyAsync(propertyId, identityUserId, cancellationToken);
     }
 }

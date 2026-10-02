@@ -62,6 +62,8 @@ namespace Shiftr.Repository
             var property = await _context.Properties
                 .Include(existing => existing.Managers)
                 .Include(existing => existing.FrontDeskAgents)
+                .Include(existing => existing.Amenities)
+                    .ThenInclude(amenity => amenity.Reservations)
                 .FirstOrDefaultAsync(existing => existing.Id == id);
 
             if (property is null) return PropertyDeleteResult.NotFound;
@@ -69,10 +71,20 @@ namespace Shiftr.Repository
             {
                 return PropertyDeleteResult.HasEmployees;
             }
+            if (property.Amenities.Any(amenity => amenity.Reservations.Count > 0))
+            {
+                return PropertyDeleteResult.HasReservations;
+            }
 
             _context.Properties.Remove(property);
             await _context.SaveChangesAsync();
             return PropertyDeleteResult.Deleted;
         }
+
+        public Task<bool> IsFrontDeskAssignedToPropertyAsync(int propertyId, string identityUserId, CancellationToken cancellationToken = default) =>
+            _context.Properties.AnyAsync(property =>
+                property.Id == propertyId &&
+            property.FrontDeskAgents.Any(agent => agent.IdentityUserId == identityUserId),
+            cancellationToken);
     }
 }

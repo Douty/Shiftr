@@ -1,9 +1,9 @@
 using System.Text.Json;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
+using Microsoft.AspNetCore.Identity;
 using Shiftr.Models;
 
 namespace Shiftr.Data
@@ -15,6 +15,8 @@ namespace Shiftr.Data
         public DbSet<EmployeeBase> Employees => Set<EmployeeBase>();
         public DbSet<PropertyModel> Properties => Set<PropertyModel>();
         public DbSet<OrganizationModel> Organizations => Set<OrganizationModel>();
+        public DbSet<AmenityTypeModel> Amenities => Set<AmenityTypeModel>();
+        public DbSet<AmenityReservationModel> AmenityReservations => Set<AmenityReservationModel>();
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -35,6 +37,26 @@ namespace Shiftr.Data
             modelBuilder.Entity<PropertyModel>()
                 .HasIndex(property => property.EmployeeInviteId)
                 .IsUnique();
+
+            modelBuilder.Entity<AmenityTypeModel>()
+                .HasOne(amenity => amenity.Property)
+                .WithMany(property => property.Amenities)
+                .HasForeignKey(amenity => amenity.PropertyId)
+                .OnDelete(DeleteBehavior.Cascade);
+            modelBuilder.Entity<AmenityTypeModel>()
+                .HasIndex(amenity => new { amenity.PropertyId, amenity.Name })
+                .IsUnique();
+
+            modelBuilder.Entity<AmenityReservationModel>()
+                .HasOne(reservation => reservation.Amenity)
+                .WithMany(amenity => amenity.Reservations)
+                .HasForeignKey(reservation => reservation.AmenityTypeId)
+                .OnDelete(DeleteBehavior.Restrict);
+            modelBuilder.Entity<AmenityReservationModel>()
+                .HasOne<IdentityUser>()
+                .WithMany()
+                .HasForeignKey(reservation => reservation.ResidentIdentityUserId)
+                .OnDelete(DeleteBehavior.Restrict);
 
             var shiftListConverter = new ValueConverter<List<Shift>, string>(
                 shifts => JsonSerializer.Serialize(shifts),

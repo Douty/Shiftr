@@ -84,6 +84,7 @@ namespace Shiftr.Controllers
                 PropertyDeleteResult.Deleted => NoContent(),
                 PropertyDeleteResult.NotFound => NotFound(),
                 PropertyDeleteResult.HasEmployees => Conflict(),
+                PropertyDeleteResult.HasReservations => Conflict(),
                 _ => throw new InvalidOperationException("Unknown property deletion result.")
             };
         }

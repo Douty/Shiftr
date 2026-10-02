@@ -21,6 +21,7 @@ public class PropertyControllerTests
         public bool CanAccessPropertyResult { get; init; }
         public bool CanManagePropertyResult { get; init; }
         public bool CanManageOrganizationResult { get; init; }
+        public bool CanManageReservationsResult { get; init; }
         public int? CreatedOrganizationId { get; private set; }
         public PropertyModel? PropertyPassedToCreate { get; private set; }
         public PropertyModel? PropertyPassedToUpdate { get; private set; }
@@ -66,6 +67,9 @@ public class PropertyControllerTests
 
         public Task<bool> CanManageOrganization(int organizationId, string identityUserId) =>
             Task.FromResult(CanManageOrganizationResult);
+
+        public Task<bool> CanManageReservations(int propertyId, string identityUserId, CancellationToken cancellationToken = default) =>
+            Task.FromResult(CanManageReservationsResult);
     }
 
     private static PropertyController CreateController(IPropertyService service, bool authenticated = true)
@@ -277,6 +281,7 @@ public class PropertyControllerTests
     [InlineData(PropertyDeleteResult.Deleted, typeof(NoContentResult))]
     [InlineData(PropertyDeleteResult.NotFound, typeof(NotFoundResult))]
     [InlineData(PropertyDeleteResult.HasEmployees, typeof(ConflictResult))]
+    [InlineData(PropertyDeleteResult.HasReservations, typeof(ConflictResult))]
     public async Task DeleteProperty_MapsRepositoryResultToHttpResult(
         PropertyDeleteResult deleteResult,
         Type expectedResultType)

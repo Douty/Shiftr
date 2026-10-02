@@ -10,5 +10,6 @@ namespace Shiftr.Interface
         Task<bool> IsInviteCodeValidAsync(string inviteCode, CancellationToken cancellationToken = default);
         Task<string?> RotateInviteIdAsync(int id, PropertyInviteType inviteType);
         Task<PropertyDeleteResult> DeleteAsync(int id);
+        Task<bool> IsFrontDeskAssignedToPropertyAsync(int propertyId, string identityUserId, CancellationToken cancellationToken = default);
     }
 }

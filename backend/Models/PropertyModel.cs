@@ -14,7 +14,8 @@ namespace Shiftr.Models
     {
         Deleted,
         NotFound,
-        HasEmployees
+        HasEmployees,
+        HasReservations
     }
 
     public class PropertyModel
@@ -26,6 +27,7 @@ namespace Shiftr.Models
         
         public List<ManagerModel> Managers { get; set; } = new();
         public List<FrontDeskAgentModel> FrontDeskAgents { get; set; } = new();
+        public List<AmenityTypeModel> Amenities { get; set; } = new();
 
         public string RotateInviteId(PropertyInviteType inviteType)
         {

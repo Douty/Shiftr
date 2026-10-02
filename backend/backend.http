@@ -1,6 +1,82 @@
 @backend_HostAddress = http://localhost:5282
+@accessToken = replace-with-access-token
+@propertyId = 1
+@amenityId = 1
+@reservationId = 1
+@residentIdentityUserId = replace-with-resident-identity-user-id
 
-GET {{backend_HostAddress}}/weatherforecast/
+### List property amenity types
+GET {{backend_HostAddress}}/api/properties/{{propertyId}}/amenities
+Authorization: Bearer {{accessToken}}
 Accept: application/json
 
 ###
+
+### Create an amenity type (Owner or Admin)
+POST {{backend_HostAddress}}/api/properties/{{propertyId}}/amenities
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+	"name": "Meeting Room",
+	"description": "Second-floor conference room"
+}
+
+### Get an amenity type
+GET {{backend_HostAddress}}/api/properties/{{propertyId}}/amenities/{{amenityId}}
+Authorization: Bearer {{accessToken}}
+Accept: application/json
+
+### Update an amenity type (Owner or Admin)
+PUT {{backend_HostAddress}}/api/properties/{{propertyId}}/amenities/{{amenityId}}
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+	"name": "Meeting Room",
+	"description": "Updated room description"
+}
+
+### Delete an amenity type (Owner or Admin; conflicts while reservations exist)
+DELETE {{backend_HostAddress}}/api/properties/{{propertyId}}/amenities/{{amenityId}}
+Authorization: Bearer {{accessToken}}
+
+### List property reservations (assigned Front Desk employee)
+GET {{backend_HostAddress}}/api/properties/{{propertyId}}/reservations
+Authorization: Bearer {{accessToken}}
+Accept: application/json
+
+### Create a reservation (assigned Front Desk employee)
+POST {{backend_HostAddress}}/api/properties/{{propertyId}}/reservations
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+	"amenityTypeId": {{amenityId}},
+	"residentIdentityUserId": "{{residentIdentityUserId}}",
+	"startsAt": "2026-10-02T14:00:00Z",
+	"endsAt": "2026-10-02T15:00:00Z",
+	"notes": ""
+}
+
+### Get a reservation (assigned Front Desk employee)
+GET {{backend_HostAddress}}/api/properties/{{propertyId}}/reservations/{{reservationId}}
+Authorization: Bearer {{accessToken}}
+Accept: application/json
+
+### Update a reservation
+PUT {{backend_HostAddress}}/api/properties/{{propertyId}}/reservations/{{reservationId}}
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+	"amenityTypeId": {{amenityId}},
+	"residentIdentityUserId": "{{residentIdentityUserId}}",
+	"startsAt": "2026-10-02T15:00:00Z",
+	"endsAt": "2026-10-02T16:00:00Z",
+	"notes": "Updated booking"
+}
+
+### Delete a reservation
+DELETE {{backend_HostAddress}}/api/properties/{{propertyId}}/reservations/{{reservationId}}
+Authorization: Bearer {{accessToken}}

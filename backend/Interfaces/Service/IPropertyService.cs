@@ -13,5 +13,6 @@ namespace Shiftr.Interface
         Task<bool> CanAccessProperty(int propertyId, string identityUserId);
         Task<bool> CanManageProperty(int propertyId, string identityUserId);
         Task<bool> CanManageOrganization(int organizationId, string identityUserId);
+        Task<bool> CanManageReservations(int propertyId, string identityUserId, CancellationToken cancellationToken = default);
     }
 }
