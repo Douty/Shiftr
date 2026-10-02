@@ -4,7 +4,7 @@ function AboutSection() {
       aria-labelledby="about-title"
       className="mb-12 rounded-3xl bg-[#E3B5A4] p-7 sm:p-10 lg:p-14"
     >
-      <div className="max-w-[40rem]">
+      <div className="max-w-160">
         <h2
           id="about-title"
           className="mb-4 font-['Fraunces',Georgia,serif] text-[clamp(1.75rem,4vw,2.25rem)] font-semibold leading-[1.15] tracking-[-0.01em]"

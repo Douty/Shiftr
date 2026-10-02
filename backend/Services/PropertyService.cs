@@ -25,6 +25,12 @@ namespace Shiftr.Services
         public Task<PropertyModel?> UpdateProperty(PropertyModel property) =>
             _repository.UpdateAsync(property);
 
+        public Task<bool> IsInviteCodeValidAsync(string inviteCode, CancellationToken cancellationToken = default) =>
+            _repository.IsInviteCodeValidAsync(inviteCode, cancellationToken);
+
+        public Task<string?> RotateInviteId(int id, PropertyInviteType inviteType) =>
+            _repository.RotateInviteIdAsync(id, inviteType);
+
         public Task<PropertyDeleteResult> DeleteProperty(int id) =>
             _repository.DeleteAsync(id);
 

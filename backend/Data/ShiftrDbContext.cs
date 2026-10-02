@@ -29,6 +29,13 @@ namespace Shiftr.Data
                 .HasIndex(employee => employee.IdentityUserId)
                 .IsUnique();
 
+            modelBuilder.Entity<PropertyModel>()
+                .HasIndex(property => property.ResidentInviteId)
+                .IsUnique();
+            modelBuilder.Entity<PropertyModel>()
+                .HasIndex(property => property.EmployeeInviteId)
+                .IsUnique();
+
             var shiftListConverter = new ValueConverter<List<Shift>, string>(
                 shifts => JsonSerializer.Serialize(shifts),
                 json => JsonSerializer.Deserialize<List<Shift>>(json) ?? new List<Shift>());

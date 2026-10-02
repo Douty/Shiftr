@@ -1,15 +1,56 @@
 import { useState, type FormEvent } from 'react'
+import axios from 'axios'
+
 
 type AuthMode = 'sign-in' | 'create-account'
+type LoginResponse = { accessToken: string }
 
 function AuthPage() {
   const isEmployee = window.location.pathname.endsWith('/employee')
   const [mode, setMode] = useState<AuthMode>('sign-in')
   const [notice, setNotice] = useState('')
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    setNotice('Authentication is not connected yet. Your details have not been sent.')
+    setNotice('')
+    setIsSubmitting(true)
+
+    const formData = new FormData(event.currentTarget)
+    const credentials = {
+      email: String(formData.get('email')),
+      password: String(formData.get('password')),
+    }
+
+    try {
+      if (mode === 'create-account') {
+        await axios.post('/api/register', {
+            ...credentials,
+            inviteCode: String(formData.get('inviteCode') ?? '').trim(),
+        })
+      }
+
+      const { data: login } = await axios.post<LoginResponse>(
+        '/api/login?useCookies=false',
+        credentials
+      )
+      window.localStorage.setItem('accessToken', login.accessToken)
+      setNotice(
+        mode === 'create-account'
+          ? 'Account created and signed in. Your property team must assign your access before you can use protected features.'
+          : 'Signed in. Your property team must assign your access before you can use protected features.'
+      )
+    } catch (error) {
+      if (axios.isAxiosError<{ detail?: string; title?: string; errors?: Record<string, string[]> }>(error)) {
+        const response = error.response?.data
+        const validationErrors = response?.errors ? Object.values(response.errors).flat().join(' ') : ''
+        setNotice(response?.detail ?? validationErrors ?? response?.title ?? error.message)
+      } else {
+        setNotice(error instanceof Error ? error.message : 'Unable to connect to the server.')
+      }
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   function changeMode(nextMode: AuthMode) {
@@ -120,13 +161,13 @@ function AuthPage() {
           <form id="auth-form" onSubmit={handleSubmit} className="grid gap-5">
             {mode === 'create-account' && (
               <label className="grid gap-2 text-base font-semibold">
-                Full name
+                Property invite code
                 <input
-                  autoComplete="name"
+                  autoComplete="off"
                   className="min-h-12 w-full rounded-lg border border-[#B98482] bg-white px-4 text-base font-normal outline-none transition focus:border-[#773344] focus:ring-2 focus:ring-[#773344]/20"
-                  name="name"
-                  placeholder="Your name"
-                  required
+                  name="inviteCode"
+                  placeholder="Enter the code from your property"
+                  type="text"
                 />
               </label>
             )}
@@ -163,10 +204,15 @@ function AuthPage() {
             )}
 
             <button
+              disabled={isSubmitting}
               className="mt-1 inline-flex min-h-13 items-center justify-center rounded-xl border-2 border-[#773344] bg-[#773344] px-6 py-3 text-base font-bold text-white transition-colors hover:border-[#5E2836] hover:bg-[#5E2836] focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0B0014]"
               type="submit"
             >
-              {mode === 'sign-in' ? 'Sign in to Shiftr' : 'Create account'}
+              {isSubmitting
+                ? 'Connecting...'
+                : mode === 'sign-in'
+                  ? 'Sign in to Shiftr'
+                  : 'Create account'}
             </button>
           </form>
 

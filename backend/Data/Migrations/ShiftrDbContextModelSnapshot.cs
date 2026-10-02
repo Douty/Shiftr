@@ -290,7 +290,15 @@ namespace backend.Data.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
+                    b.Property<string>("EmployeeInviteId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
                     b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("ResidentInviteId")
                         .IsRequired()
                         .HasColumnType("text");
 
@@ -300,6 +308,12 @@ namespace backend.Data.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("OrganizationModelId");
+
+                    b.HasIndex("EmployeeInviteId")
+                        .IsUnique();
+
+                    b.HasIndex("ResidentInviteId")
+                        .IsUnique();
 
                     b.ToTable("Properties");
                 });

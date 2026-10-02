@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Shiftr.Controllers;
 using Shiftr.Data;
 using Shiftr.Interface;
+using Shiftr.Middleware;
 using Shiftr.Repository;
 using Shiftr.Security;
 using Shiftr.Services;
@@ -66,6 +67,7 @@ if (app.Environment.IsDevelopment())
 app.UseHttpsRedirection();
 app.UseAuthentication();
 app.UseAuthorization();
+app.UseMiddleware<InviteRegistrationValidationMiddleware>();
 app.MapIdentityApi<IdentityUser>();
 app.MapControllers();
 

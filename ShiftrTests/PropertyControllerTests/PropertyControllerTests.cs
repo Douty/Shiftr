@@ -25,6 +25,8 @@ public class PropertyControllerTests
         public PropertyModel? PropertyPassedToCreate { get; private set; }
         public PropertyModel? PropertyPassedToUpdate { get; private set; }
         public int? DeletedPropertyId { get; private set; }
+        public (int Id, PropertyInviteType Type)? RotatedInvite { get; private set; }
+        public string? RotatedInviteId { get; init; }
 
         public Task<PropertyModel?> GetPropertyById(int id) => Task.FromResult(PropertyToReturn);
 
@@ -39,6 +41,12 @@ public class PropertyControllerTests
         {
             PropertyPassedToUpdate = property;
             return Task.FromResult(UpdatedProperty);
+        }
+
+        public Task<string?> RotateInviteId(int id, PropertyInviteType inviteType)
+        {
+            RotatedInvite = (id, inviteType);
+            return Task.FromResult(RotatedInviteId);
         }
 
         public Task<PropertyDeleteResult> DeleteProperty(int id)
@@ -77,6 +85,7 @@ public class PropertyControllerTests
     [InlineData(nameof(PropertyController.GetProperty), AuthorizationPolicies.RegularEmployee)]
     [InlineData(nameof(PropertyController.CreateProperty), AuthorizationPolicies.AdminOnly)]
     [InlineData(nameof(PropertyController.UpdateProperty), AuthorizationPolicies.AdminOnly)]
+    [InlineData(nameof(PropertyController.RotateInviteId), AuthorizationPolicies.AdminOnly)]
     [InlineData(nameof(PropertyController.DeleteProperty), AuthorizationPolicies.AdminOnly)]
     public void Actions_RequireExpectedPolicy(string actionName, string expectedPolicy)
     {
@@ -87,6 +96,21 @@ public class PropertyControllerTests
             .Single();
 
         Assert.Equal(expectedPolicy, authorization.Policy);
+    }
+
+    [Fact]
+    public void PropertyInviteIds_AreGeneratedAndRotateIndependently()
+    {
+        var property = new PropertyModel { Name = "Main Street" };
+        var originalResidentInviteId = property.ResidentInviteId;
+        var originalEmployeeInviteId = property.EmployeeInviteId;
+
+        var rotatedInviteId = property.RotateInviteId(PropertyInviteType.Resident);
+
+        Assert.NotEqual(originalResidentInviteId, originalEmployeeInviteId);
+        Assert.NotEqual(originalResidentInviteId, rotatedInviteId);
+        Assert.Equal(rotatedInviteId, property.ResidentInviteId);
+        Assert.Equal(originalEmployeeInviteId, property.EmployeeInviteId);
     }
 
     [Fact]
@@ -199,6 +223,51 @@ public class PropertyControllerTests
         var response = Assert.IsType<OkObjectResult>(result.Result);
         Assert.Same(property, response.Value);
         Assert.Same(property, service.PropertyPassedToUpdate);
+    }
+
+    [Fact]
+    public async Task RotateInviteId_RotatesSelectedInviteForAdmin()
+    {
+        var service = new FakePropertyService
+        {
+            PropertyToReturn = new PropertyModel { Id = 14, Name = "Main Street" },
+            CanManagePropertyResult = true,
+            RotatedInviteId = "new-invite-id"
+        };
+        var controller = CreateController(service);
+
+        var result = await controller.RotateInviteId(14, PropertyInviteType.Resident);
+
+        var response = Assert.IsType<OkObjectResult>(result);
+        Assert.Equal((14, PropertyInviteType.Resident), service.RotatedInvite);
+        Assert.Equal("new-invite-id", response.Value!.GetType().GetProperty("inviteId")!.GetValue(response.Value));
+    }
+
+    [Fact]
+    public async Task RotateInviteId_ForbidsNonAdmin()
+    {
+        var service = new FakePropertyService
+        {
+            PropertyToReturn = new PropertyModel { Id = 14, Name = "Main Street" }
+        };
+        var controller = CreateController(service);
+
+        var result = await controller.RotateInviteId(14, PropertyInviteType.Employee);
+
+        Assert.IsType<ForbidResult>(result);
+        Assert.Null(service.RotatedInvite);
+    }
+
+    [Fact]
+    public async Task RotateInviteId_ReturnsNotFoundForMissingProperty()
+    {
+        var service = new FakePropertyService();
+        var controller = CreateController(service);
+
+        var result = await controller.RotateInviteId(14, PropertyInviteType.Employee);
+
+        Assert.IsType<NotFoundResult>(result);
+        Assert.Null(service.RotatedInvite);
     }
 
     [Theory]

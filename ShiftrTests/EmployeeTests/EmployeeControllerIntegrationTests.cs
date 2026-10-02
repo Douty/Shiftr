@@ -64,7 +64,12 @@ public sealed class EmployeeControllerIntegrationTests : IClassFixture<ApiTestFa
         const string password = "Secure-Pass123!";
 
         using var registerClient = _factory.CreateClient();
-        using var registerResponse = await registerClient.PostAsJsonAsync("/register", new { email, password });
+        using var registerResponse = await registerClient.PostAsJsonAsync("/register", new
+        {
+            email,
+            password,
+            inviteCode = ApiTestFactory.RegistrationInviteCode
+        });
         Assert.Equal(HttpStatusCode.OK, registerResponse.StatusCode);
 
         await AddRoleAsync(email, IdentityRoles.Admin);
@@ -111,7 +116,12 @@ public sealed class EmployeeControllerIntegrationTests : IClassFixture<ApiTestFa
         var email = $"{Guid.NewGuid():N}@example.com";
         const string password = "Secure-Pass123!";
         var client = _factory.CreateClient();
-        using var registerResponse = await client.PostAsJsonAsync("/register", new { email, password });
+        using var registerResponse = await client.PostAsJsonAsync("/register", new
+        {
+            email,
+            password,
+            inviteCode = ApiTestFactory.RegistrationInviteCode
+        });
         Assert.Equal(HttpStatusCode.OK, registerResponse.StatusCode);
         await AddRoleAsync(email, role);
         await SetBearerTokenAsync(client, email, password);
@@ -281,7 +291,12 @@ public sealed class EmployeeControllerIntegrationTests : IClassFixture<ApiTestFa
         var email = $"{Guid.NewGuid():N}@example.com";
         const string password = "Secure-Pass123!";
 
-        using var registerResponse = await client.PostAsJsonAsync("/register", new { email, password });
+        using var registerResponse = await client.PostAsJsonAsync("/register", new
+        {
+            email,
+            password,
+            inviteCode = ApiTestFactory.RegistrationInviteCode
+        });
         using var loginResponse = await client.PostAsJsonAsync(
             "/login?useCookies=false",
             new { email, password });
@@ -290,6 +305,26 @@ public sealed class EmployeeControllerIntegrationTests : IClassFixture<ApiTestFa
         Assert.Equal(HttpStatusCode.OK, loginResponse.StatusCode);
         using var loginDocument = JsonDocument.Parse(await loginResponse.Content.ReadAsStringAsync());
         Assert.False(string.IsNullOrWhiteSpace(loginDocument.RootElement.GetProperty("accessToken").GetString()));
+    }
+
+    [Fact]
+    public async Task Registration_RejectsInvalidInviteCodeBeforeCreatingUser()
+    {
+        using var client = _factory.CreateClient();
+        var email = $"{Guid.NewGuid():N}@example.com";
+        const string password = "Secure-Pass123!";
+
+        using var response = await client.PostAsJsonAsync("/register", new
+        {
+            email,
+            password,
+            inviteCode = "NOT-A-VALID-INVITE"
+        });
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        using var scope = _factory.Services.CreateScope();
+        var userManager = scope.ServiceProvider.GetRequiredService<UserManager<IdentityUser>>();
+        Assert.Null(await userManager.FindByEmailAsync(email));
     }
 
     [Fact]
@@ -311,7 +346,12 @@ public sealed class EmployeeControllerIntegrationTests : IClassFixture<ApiTestFa
         var email = $"{Guid.NewGuid():N}@example.com";
         const string password = "Secure-Pass123!";
 
-        using var registerResponse = await client.PostAsJsonAsync("/register", new { email, password });
+        using var registerResponse = await client.PostAsJsonAsync("/register", new
+        {
+            email,
+            password,
+            inviteCode = ApiTestFactory.RegistrationInviteCode
+        });
         Assert.Equal(HttpStatusCode.OK, registerResponse.StatusCode);
 
         await SetBearerTokenAsync(client, email, password);

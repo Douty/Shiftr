@@ -5,12 +5,15 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Shiftr.Controllers;
 using Shiftr.Data;
+using Shiftr.Models;
 using Testcontainers.PostgreSql;
 
 namespace ShiftrTests.fixture
 {
 public sealed class ApiTestFactory : WebApplicationFactory<Program>, IAsyncLifetime
 {
+    public const string RegistrationInviteCode = "TEST-RESIDENT-INVITE";
+
     private readonly PostgreSqlContainer _postgres = new PostgreSqlBuilder("postgres:16-alpine")
         .WithDatabase("testdb")
         .WithUsername("testuser")
@@ -37,6 +40,13 @@ public sealed class ApiTestFactory : WebApplicationFactory<Program>, IAsyncLifet
         using var scope = Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<ShiftrDbContext>();
         await db.Database.MigrateAsync();
+        db.Properties.Add(new PropertyModel
+        {
+            Name = "Registration Test Property",
+            ResidentInviteId = RegistrationInviteCode,
+            EmployeeInviteId = "TEST-EMPLOYEE-INVITE"
+        });
+        await db.SaveChangesAsync();
     }
 
     public new async Task DisposeAsync()
