@@ -18,6 +18,7 @@ namespace Shiftr.Data
         public DbSet<OrganizationModel> Organizations => Set<OrganizationModel>();
         public DbSet<AmenityTypeModel> Amenities => Set<AmenityTypeModel>();
         public DbSet<AmenityReservationModel> AmenityReservations => Set<AmenityReservationModel>();
+        public DbSet<ShiftNoteModel> ShiftNotes => Set<ShiftNoteModel>();
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -85,6 +86,19 @@ namespace Shiftr.Data
                 .WithMany()
                 .HasForeignKey(reservation => reservation.ResidentIdentityUserId)
                 .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<ShiftNoteModel>()
+                .HasOne<PropertyModel>()
+                .WithMany()
+                .HasForeignKey(note => note.PropertyId)
+                .OnDelete(DeleteBehavior.Cascade);
+            modelBuilder.Entity<ShiftNoteModel>()
+                .HasOne(note => note.AuthorEmployee)
+                .WithMany()
+                .HasForeignKey(note => note.AuthorEmployeeId)
+                .OnDelete(DeleteBehavior.Restrict);
+            modelBuilder.Entity<ShiftNoteModel>()
+                .HasIndex(note => new { note.PropertyId, note.UpdatedAt });
 
             var shiftListConverter = new ValueConverter<List<Shift>, string>(
                 shifts => JsonSerializer.Serialize(shifts),

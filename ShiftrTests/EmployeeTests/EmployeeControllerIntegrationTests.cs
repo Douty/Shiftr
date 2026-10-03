@@ -308,6 +308,72 @@ public sealed class EmployeeControllerIntegrationTests : IClassFixture<ApiTestFa
     }
 
     [Fact]
+    public async Task FrontDeskEmployee_CanCreateReadUpdateAndDeleteShiftNotes()
+    {
+        using var client = _factory.CreateClient();
+        var email = $"{Guid.NewGuid():N}@example.com";
+        const string password = "Secure-Pass123!";
+
+        using var registerResponse = await client.PostAsJsonAsync("/register", new
+        {
+            email,
+            password,
+            inviteCode = ApiTestFactory.RegistrationInviteCode
+        });
+        Assert.Equal(HttpStatusCode.OK, registerResponse.StatusCode);
+        await AddRoleAsync(email, IdentityRoles.FrontDesk);
+
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var services = scope.ServiceProvider;
+            var userManager = services.GetRequiredService<UserManager<IdentityUser>>();
+            var user = await userManager.FindByEmailAsync(email);
+            Assert.NotNull(user);
+
+            var database = services.GetRequiredService<ShiftrDbContext>();
+            var property = new PropertyModel { Name = "Shift Notes Test Property" };
+            database.Properties.Add(property);
+            await database.SaveChangesAsync();
+            database.Employees.Add(new FrontDeskAgentModel
+            {
+                FirstName = "Riley",
+                LastName = "Morgan",
+                Email = email,
+                PhoneNumber = "555-0100",
+                IdentityUserId = user!.Id,
+                PropteryId = property.Id
+            });
+            await database.SaveChangesAsync();
+        }
+
+        await SetBearerTokenAsync(client, email, password);
+        using var createResponse = await client.PostAsJsonAsync("/api/shift-notes", new
+        {
+            title = "Package room",
+            content = "Parcel for unit 204 is at the desk."
+        });
+        Assert.Equal(HttpStatusCode.Created, createResponse.StatusCode);
+        using var createdDocument = JsonDocument.Parse(await createResponse.Content.ReadAsStringAsync());
+        var noteId = createdDocument.RootElement.GetProperty("id").GetInt32();
+        Assert.Equal("Riley Morgan", createdDocument.RootElement.GetProperty("authorName").GetString());
+
+        using var readResponse = await client.GetAsync($"/api/shift-notes/{noteId}");
+        Assert.Equal(HttpStatusCode.OK, readResponse.StatusCode);
+
+        using var updateResponse = await client.PutAsJsonAsync($"/api/shift-notes/{noteId}", new
+        {
+            title = "Package room update",
+            content = "Parcel was collected by unit 204."
+        });
+        Assert.Equal(HttpStatusCode.OK, updateResponse.StatusCode);
+
+        using var deleteResponse = await client.DeleteAsync($"/api/shift-notes/{noteId}");
+        using var deletedReadResponse = await client.GetAsync($"/api/shift-notes/{noteId}");
+        Assert.Equal(HttpStatusCode.NoContent, deleteResponse.StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, deletedReadResponse.StatusCode);
+    }
+
+    [Fact]
     public async Task Registration_RejectsInvalidInviteCodeBeforeCreatingUser()
     {
         using var client = _factory.CreateClient();

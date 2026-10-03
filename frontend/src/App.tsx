@@ -3,8 +3,13 @@ import AboutSection from './components/Landing/AboutSection'
 import BenefitsSection from './components/Landing/BenefitsSection'
 import HeroSection from './components/Landing/HeroSection'
 import AuthPage from './components/Auth/AuthPage'
+import ShiftNotesPage from './components/Employee/ShiftNotesPage'
 
 function App() {
+  if (window.location.pathname.startsWith('/employee')) {
+    return <ShiftNotesPage />
+  }
+
   if (window.location.pathname.startsWith('/sign-in/')) {
     return <AuthPage />
   }

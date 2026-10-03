@@ -39,6 +39,8 @@ builder.Services.AddScoped<IPropertyRepository, PropertyRepository>();
 builder.Services.AddScoped<IPropertyService, PropertyService>();
 builder.Services.AddScoped<IAmenityRepository, AmenityRepository>();
 builder.Services.AddScoped<IAmenityService, AmenityService>();
+builder.Services.AddScoped<IShiftNoteRepository, ShiftNoteRepository>();
+builder.Services.AddScoped<IShiftNoteService, ShiftNoteService>();
 
 
 

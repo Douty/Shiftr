@@ -35,6 +35,10 @@ function AuthPage() {
         credentials
       )
       window.localStorage.setItem('accessToken', login.accessToken)
+      if (isEmployee) {
+        window.location.assign('/employee/shift-notes')
+        return
+      }
       setNotice(
         mode === 'create-account'
           ? 'Account created and signed in. Your property team must assign your access before you can use protected features.'
