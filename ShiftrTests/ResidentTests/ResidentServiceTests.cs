@@ -44,6 +44,21 @@ public class ResidentServiceTests
         Assert.True(updated.CallToNotify);
     }
 
+    [Fact]
+    public async Task UpdatePreferencesPersistsCallPreferenceAndGuestListForTheSignedInResident()
+    {
+        var repository = new FakeResidentRepository();
+        repository.Resident.IdentityUserId = "resident-user";
+        var service = new ResidentService(repository);
+
+        var updated = await service.UpdatePreferences(
+            "resident-user", true, ["Morgan", "Riley"]);
+
+        Assert.NotNull(updated);
+        Assert.True(updated.CallToNotify);
+        Assert.Equal(["Morgan", "Riley"], updated.AllowedGuests);
+    }
+
     private sealed class FakeResidentRepository : IResidentRepository
     {
         public ResidentModel Resident { get; } = new()
@@ -59,6 +74,21 @@ public class ResidentServiceTests
 
         public Task<ResidentModel?> GetByIdAsync(int propertyId, int residentId, CancellationToken cancellationToken = default) =>
             Task.FromResult<ResidentModel?>(propertyId == Resident.PropertyId && residentId == Resident.Id ? Resident : null);
+
+        public Task<ResidentModel?> GetByIdentityUserIdAsync(string identityUserId, CancellationToken cancellationToken = default) =>
+            Task.FromResult<ResidentModel?>(identityUserId == Resident.IdentityUserId ? Resident : null);
+
+        public Task<ResidentModel?> UpdatePreferencesAsync(
+            string identityUserId,
+            bool callToNotify,
+            List<string> allowedGuests,
+            CancellationToken cancellationToken = default)
+        {
+            if (identityUserId != Resident.IdentityUserId) return Task.FromResult<ResidentModel?>(null);
+            Resident.CallToNotify = callToNotify;
+            Resident.AllowedGuests = allowedGuests;
+            return Task.FromResult<ResidentModel?>(Resident);
+        }
 
         public Task<ResidentModel?> AddAsync(int propertyId, ResidentModel resident, CancellationToken cancellationToken = default) =>
             Task.FromResult<ResidentModel?>(resident);

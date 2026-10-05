@@ -6,6 +6,8 @@ namespace Shiftr.Interface
     {
         Task<IReadOnlyList<ResidentModel>> GetResidents(int propertyId, CancellationToken cancellationToken = default);
         Task<ResidentModel?> GetResident(int propertyId, int residentId, CancellationToken cancellationToken = default);
+        Task<ResidentModel?> GetResidentByIdentityUserId(string identityUserId, CancellationToken cancellationToken = default);
+        Task<ResidentModel?> UpdatePreferences(string identityUserId, bool callToNotify, List<string> allowedGuests, CancellationToken cancellationToken = default);
         Task<ResidentModel?> CreateResident(int propertyId, ResidentModel resident, CancellationToken cancellationToken = default);
         Task<ResidentModel?> UpdateResident(int propertyId, ResidentModel resident, CancellationToken cancellationToken = default);
         Task<ResidentModel?> AddAllowedGuest(int propertyId, int residentId, string guestName, CancellationToken cancellationToken = default);

@@ -82,9 +82,33 @@ namespace Shiftr.Repository
                 .OrderBy(reservation => reservation.StartsAt)
                 .ToListAsync(cancellationToken);
 
+        public async Task<IReadOnlyList<AmenityReservationModel>> GetReservationsForResidentAsync(
+            int propertyId,
+            string residentIdentityUserId,
+            CancellationToken cancellationToken = default) =>
+            await _context.AmenityReservations
+                .AsNoTracking()
+                .Where(reservation =>
+                    reservation.Amenity!.PropertyId == propertyId &&
+                    reservation.ResidentIdentityUserId == residentIdentityUserId)
+                .OrderBy(reservation => reservation.StartsAt)
+                .ToListAsync(cancellationToken);
+
         public Task<AmenityReservationModel?> GetReservationAsync(int propertyId, int reservationId, CancellationToken cancellationToken = default) =>
             _context.AmenityReservations.FirstOrDefaultAsync(
                 reservation => reservation.Id == reservationId && reservation.Amenity!.PropertyId == propertyId,
+                cancellationToken);
+
+        public Task<AmenityReservationModel?> GetReservationForResidentAsync(
+            int propertyId,
+            int reservationId,
+            string residentIdentityUserId,
+            CancellationToken cancellationToken = default) =>
+            _context.AmenityReservations.FirstOrDefaultAsync(
+                reservation =>
+                    reservation.Id == reservationId &&
+                    reservation.ResidentIdentityUserId == residentIdentityUserId &&
+                    reservation.Amenity!.PropertyId == propertyId,
                 cancellationToken);
 
         public Task<bool> AmenityExistsAsync(int propertyId, int amenityId, CancellationToken cancellationToken = default) =>
@@ -133,9 +157,52 @@ namespace Shiftr.Repository
             return reservation;
         }
 
+        public async Task<AmenityReservationModel?> UpdateResidentReservationAsync(
+            int propertyId,
+            int reservationId,
+            int amenityId,
+            string residentIdentityUserId,
+            DateTimeOffset startsAt,
+            DateTimeOffset endsAt,
+            string? notes,
+            CancellationToken cancellationToken = default)
+        {
+            var reservation = await _context.AmenityReservations.FirstOrDefaultAsync(
+                existing => existing.Id == reservationId &&
+                    existing.ResidentIdentityUserId == residentIdentityUserId &&
+                    existing.Amenity!.PropertyId == propertyId,
+                cancellationToken);
+            if (reservation is null || !await AmenityExistsAsync(propertyId, amenityId, cancellationToken)) return null;
+
+            reservation.AmenityTypeId = amenityId;
+            reservation.StartsAt = startsAt;
+            reservation.EndsAt = endsAt;
+            reservation.Notes = notes;
+            await _context.SaveChangesAsync(cancellationToken);
+            return reservation;
+        }
+
         public async Task<bool> DeleteReservationAsync(int propertyId, int reservationId, CancellationToken cancellationToken = default)
         {
             var reservation = await GetReservationAsync(propertyId, reservationId, cancellationToken);
+            if (reservation is null) return false;
+
+            _context.AmenityReservations.Remove(reservation);
+            await _context.SaveChangesAsync(cancellationToken);
+            return true;
+        }
+
+        public async Task<bool> DeleteResidentReservationAsync(
+            int propertyId,
+            int reservationId,
+            string residentIdentityUserId,
+            CancellationToken cancellationToken = default)
+        {
+            var reservation = await _context.AmenityReservations.FirstOrDefaultAsync(
+                existing => existing.Id == reservationId &&
+                    existing.ResidentIdentityUserId == residentIdentityUserId &&
+                    existing.Amenity!.PropertyId == propertyId,
+                cancellationToken);
             if (reservation is null) return false;
 
             _context.AmenityReservations.Remove(reservation);

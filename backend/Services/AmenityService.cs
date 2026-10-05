@@ -45,8 +45,22 @@ namespace Shiftr.Services
         public Task<IReadOnlyList<AmenityReservationModel>> GetReservations(int propertyId, CancellationToken cancellationToken = default) =>
             _repository.GetReservationsAsync(propertyId, cancellationToken);
 
+        public Task<IReadOnlyList<AmenityReservationModel>> GetReservationsForResident(
+            int propertyId,
+            string residentIdentityUserId,
+            CancellationToken cancellationToken = default) =>
+            _repository.GetReservationsForResidentAsync(propertyId, residentIdentityUserId, cancellationToken);
+
         public Task<AmenityReservationModel?> GetReservation(int propertyId, int reservationId, CancellationToken cancellationToken = default) =>
             _repository.GetReservationAsync(propertyId, reservationId, cancellationToken);
+
+        public Task<AmenityReservationModel?> GetReservationForResident(
+            int propertyId,
+            int reservationId,
+            string residentIdentityUserId,
+            CancellationToken cancellationToken = default) =>
+            _repository.GetReservationForResidentAsync(
+                propertyId, reservationId, residentIdentityUserId, cancellationToken);
 
         public async Task<(AmenityReservationResult Result, AmenityReservationModel? Reservation)> CreateReservation(int propertyId, int amenityId, string residentIdentityUserId, DateTimeOffset startsAt, DateTimeOffset endsAt, string? notes, CancellationToken cancellationToken = default)
         {
@@ -86,5 +100,44 @@ namespace Shiftr.Services
 
         public Task<bool> DeleteReservation(int propertyId, int reservationId, CancellationToken cancellationToken = default) =>
             _repository.DeleteReservationAsync(propertyId, reservationId, cancellationToken);
+
+        public async Task<(AmenityReservationResult Result, AmenityReservationModel? Reservation)> UpdateResidentReservation(
+            int propertyId,
+            int reservationId,
+            int amenityId,
+            string residentIdentityUserId,
+            DateTimeOffset startsAt,
+            DateTimeOffset endsAt,
+            string? notes,
+            CancellationToken cancellationToken = default)
+        {
+            if (await _repository.GetReservationForResidentAsync(
+                propertyId, reservationId, residentIdentityUserId, cancellationToken) is null)
+                return (AmenityReservationResult.NotFound, null);
+
+            startsAt = startsAt.ToUniversalTime();
+            endsAt = endsAt.ToUniversalTime();
+            if (endsAt <= startsAt) return (AmenityReservationResult.InvalidTimeRange, null);
+            if (!await _repository.AmenityExistsAsync(propertyId, amenityId, cancellationToken))
+                return (AmenityReservationResult.AmenityNotFound, null);
+            if (await _repository.ReservationTimeConflictsAsync(
+                amenityId, startsAt, endsAt, reservationId, cancellationToken))
+                return (AmenityReservationResult.TimeConflict, null);
+
+            var reservation = await _repository.UpdateResidentReservationAsync(
+                propertyId, reservationId, amenityId, residentIdentityUserId,
+                startsAt, endsAt, notes?.Trim(), cancellationToken);
+            return reservation is null
+                ? (AmenityReservationResult.NotFound, null)
+                : (AmenityReservationResult.Success, reservation);
+        }
+
+        public Task<bool> DeleteResidentReservation(
+            int propertyId,
+            int reservationId,
+            string residentIdentityUserId,
+            CancellationToken cancellationToken = default) =>
+            _repository.DeleteResidentReservationAsync(
+                propertyId, reservationId, residentIdentityUserId, cancellationToken);
     }
 }

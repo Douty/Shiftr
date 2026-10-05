@@ -10,7 +10,7 @@ namespace Shiftr.Controllers
 {
     [ApiController]
     [Route("api/shift-notes")]
-    [Authorize(Roles = IdentityRoles.FrontDesk)]
+    [Authorize(Roles = IdentityRoles.FrontDesk + "," + IdentityRoles.Admin)]
     public class ShiftNotesController : ControllerBase
     {
         private readonly IShiftNoteService _service;
@@ -18,6 +18,15 @@ namespace Shiftr.Controllers
         public ShiftNotesController(IShiftNoteService service)
         {
             _service = service;
+        }
+
+        [HttpGet("assignment")]
+        public async Task<IActionResult> GetEmployeeAssignment(CancellationToken cancellationToken)
+        {
+            var assignment = await GetAssignment(cancellationToken);
+            return assignment is null
+                ? Forbid()
+                : Ok(new { propertyId = assignment.Value.PropertyId });
         }
 
         [HttpGet]
@@ -78,7 +87,7 @@ namespace Shiftr.Controllers
             var identityUserId = User.FindFirstValue(ClaimTypes.NameIdentifier);
             return identityUserId is null
                 ? Task.FromResult<(int EmployeeId, int PropertyId)?>(null)
-                : _service.GetFrontDeskAssignmentAsync(identityUserId, cancellationToken);
+                : _service.GetEmployeeAssignmentAsync(identityUserId, cancellationToken);
         }
 
         private static ShiftNoteResponse ToResponse(ShiftNoteModel note) =>

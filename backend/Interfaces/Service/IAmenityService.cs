@@ -11,9 +11,13 @@ namespace Shiftr.Interface
         Task<(AmenityTypeModel? Amenity, bool NameConflict)> UpdateAmenity(int propertyId, int amenityId, string name, string? description, CancellationToken cancellationToken = default);
         Task<AmenityDeleteResult> DeleteAmenity(int propertyId, int amenityId, CancellationToken cancellationToken = default);
         Task<IReadOnlyList<AmenityReservationModel>> GetReservations(int propertyId, CancellationToken cancellationToken = default);
+        Task<IReadOnlyList<AmenityReservationModel>> GetReservationsForResident(int propertyId, string residentIdentityUserId, CancellationToken cancellationToken = default);
         Task<AmenityReservationModel?> GetReservation(int propertyId, int reservationId, CancellationToken cancellationToken = default);
+        Task<AmenityReservationModel?> GetReservationForResident(int propertyId, int reservationId, string residentIdentityUserId, CancellationToken cancellationToken = default);
         Task<(AmenityReservationResult Result, AmenityReservationModel? Reservation)> CreateReservation(int propertyId, int amenityId, string residentIdentityUserId, DateTimeOffset startsAt, DateTimeOffset endsAt, string? notes, CancellationToken cancellationToken = default);
         Task<(AmenityReservationResult Result, AmenityReservationModel? Reservation)> UpdateReservation(int propertyId, int reservationId, int amenityId, string residentIdentityUserId, DateTimeOffset startsAt, DateTimeOffset endsAt, string? notes, CancellationToken cancellationToken = default);
+        Task<(AmenityReservationResult Result, AmenityReservationModel? Reservation)> UpdateResidentReservation(int propertyId, int reservationId, int amenityId, string residentIdentityUserId, DateTimeOffset startsAt, DateTimeOffset endsAt, string? notes, CancellationToken cancellationToken = default);
         Task<bool> DeleteReservation(int propertyId, int reservationId, CancellationToken cancellationToken = default);
+        Task<bool> DeleteResidentReservation(int propertyId, int reservationId, string residentIdentityUserId, CancellationToken cancellationToken = default);
     }
 }

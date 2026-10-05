@@ -11,6 +11,7 @@ namespace Shiftr.Interface
         Task<string?> RotateInviteId(int id, PropertyInviteType inviteType);
         Task<PropertyDeleteResult> DeleteProperty(int id);
         Task<bool> CanAccessProperty(int propertyId, string identityUserId);
+        Task<bool> CanAccessAssignedProperty(int propertyId, string identityUserId, CancellationToken cancellationToken = default);
         Task<bool> CanManageProperty(int propertyId, string identityUserId);
         Task<bool> CanManageOrganization(int organizationId, string identityUserId);
         Task<bool> CanManageReservations(int propertyId, string identityUserId, CancellationToken cancellationToken = default);

@@ -37,7 +37,7 @@ function ShiftNotesPage() {
 
     async function loadNotes() {
       try {
-        const { data } = await axios.get<ShiftNote[]>('/api/api/shift-notes', {
+        const { data } = await axios.get<ShiftNote[]>('/api/shift-notes', {
           headers: getAuthHeaders(),
         })
         if (isActive) setNotes(data)
@@ -82,12 +82,12 @@ function ShiftNotesPage() {
     try {
       const headers = getAuthHeaders()
       if (selectedNoteId === null) {
-        const { data } = await axios.post<ShiftNote>('/api/api/shift-notes', payload, { headers })
+        const { data } = await axios.post<ShiftNote>('/api/shift-notes', payload, { headers })
         setNotes(current => [data, ...current])
         setSelectedNoteId(data.id)
         setNotice('Note saved.')
       } else {
-        const { data } = await axios.put<ShiftNote>(`/api/api/shift-notes/${selectedNoteId}`, payload, { headers })
+        const { data } = await axios.put<ShiftNote>(`/api/shift-notes/${selectedNoteId}`, payload, { headers })
         setNotes(current => current.map(note => note.id === data.id ? data : note)
           .sort((first, second) => Date.parse(second.updatedAt) - Date.parse(first.updatedAt)))
         setNotice('Changes saved.')
@@ -103,7 +103,7 @@ function ShiftNotesPage() {
     if (!window.confirm(`Delete "${note.title}"? This cannot be undone.`)) return
 
     try {
-      await axios.delete(`/api/api/shift-notes/${note.id}`, { headers: getAuthHeaders() })
+      await axios.delete(`/api/shift-notes/${note.id}`, { headers: getAuthHeaders() })
       setNotes(current => current.filter(item => item.id !== note.id))
       if (selectedNoteId === note.id) startNewNote()
       setNotice('Note deleted.')
@@ -118,7 +118,13 @@ function ShiftNotesPage() {
         <div className="mx-auto flex min-h-16 max-w-7xl items-center justify-between gap-4 px-5">
           <a href="/" className="font-['Fraunces',Georgia,serif] text-2xl font-bold text-[#773344] no-underline">Shiftr</a>
           <div className="flex items-center gap-4 text-sm font-semibold">
-            <span className="hidden text-[#654E4A] sm:inline">Front desk</span>
+            <span className="hidden text-[#654E4A] sm:inline">Employee workspace</span>
+            <a
+              className="rounded-md px-3 py-2 text-[#773344] underline-offset-4 hover:underline focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-[#773344]"
+              href="/employee/dashboard"
+            >
+              Employee dashboard
+            </a>
             <button
               type="button"
               className="rounded-md px-3 py-2 text-[#773344] hover:bg-[#F5E9E2] focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-[#773344]"

@@ -15,6 +15,9 @@ namespace Shiftr.Services
         public Task<OrganizationModel?> GetOrganizationById(int id) =>
             _repository.GetByIdAsync(id);
 
+        public Task<List<OrganizationModel>> GetOrganizationsForUser(string identityUserId) =>
+            _repository.GetForUserAsync(identityUserId);
+
         public Task<OrganizationModel> CreateOrganization(OrganizationModel organization) =>
             _repository.AddAsync(organization);
 

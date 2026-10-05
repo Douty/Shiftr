@@ -19,6 +19,7 @@ public class PropertyControllerTests
         public PropertyModel? UpdatedProperty { get; init; }
         public PropertyDeleteResult DeleteResult { get; init; } = PropertyDeleteResult.NotFound;
         public bool CanAccessPropertyResult { get; init; }
+        public bool CanAccessAssignedPropertyResult { get; init; }
         public bool CanManagePropertyResult { get; init; }
         public bool CanManageOrganizationResult { get; init; }
         public bool CanManageReservationsResult { get; init; }
@@ -61,6 +62,9 @@ public class PropertyControllerTests
 
         public Task<bool> CanAccessProperty(int propertyId, string identityUserId) =>
             Task.FromResult(CanAccessPropertyResult);
+
+        public Task<bool> CanAccessAssignedProperty(int propertyId, string identityUserId, CancellationToken cancellationToken = default) =>
+            Task.FromResult(CanAccessAssignedPropertyResult);
 
         public Task<bool> CanManageProperty(int propertyId, string identityUserId) =>
             Task.FromResult(CanManagePropertyResult);

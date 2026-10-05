@@ -22,6 +22,17 @@ namespace Shiftr.Repository
                 .FirstOrDefaultAsync(organization => organization.Id == id);
         }
 
+        public Task<List<OrganizationModel>> GetForUserAsync(string identityUserId) =>
+            _context.Organizations
+                .Where(organization => organization.Owners.Any(owner => owner.IdentityUserId == identityUserId) ||
+                    organization.Properties.Any(property => property.Managers.Any(manager => manager.IdentityUserId == identityUserId)))
+                .Include(organization => organization.Owners)
+                .Include(organization => organization.Properties)
+                    .ThenInclude(property => property.Managers)
+                .Include(organization => organization.Properties)
+                    .ThenInclude(property => property.FrontDeskAgents)
+                .ToListAsync();
+
         public async Task<OrganizationModel> AddAsync(OrganizationModel organization)
         {
             _context.Organizations.Add(organization);

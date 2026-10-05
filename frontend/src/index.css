@@ -1,5 +1,17 @@
 @import "tailwindcss";
 
+@theme {
+	--color-canvas: #F5E9E2;
+	--color-ink: #0B0014;
+	--color-brand: #773344;
+	--color-brand-dark: #5E2836;
+	--color-blush: #E3B5A4;
+	--color-blush-dark: #DBA692;
+	--color-accent: #D44D5C;
+	--font-sans: Inter, system-ui, sans-serif;
+	--font-display: Fraunces, Georgia, serif;
+}
+
 html,
 body,
 #root {
@@ -8,5 +20,5 @@ body,
 
 html,
 body {
-	background-color: #F5E9E2;
+	background-color: var(--color-canvas);
 }

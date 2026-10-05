@@ -1,11 +1,44 @@
 import './App.css'
-import AboutSection from './components/Landing/AboutSection'
-import BenefitsSection from './components/Landing/BenefitsSection'
-import HeroSection from './components/Landing/HeroSection'
+import LandingPage from './components/Landing/LandingPage'
 import AuthPage from './components/Auth/AuthPage'
 import ShiftNotesPage from './components/Employee/ShiftNotesPage'
+import EmployeeDashboardPage from './components/Employee/EmployeeDashboardPage'
+import AmenityCalendarPage from './components/Employee/AmenityCalendarPage'
+import DailyActivityLogPage from './components/Employee/DailyActivityLogPage'
+import ResidentLookupPage from './components/Employee/ResidentLookupPage'
+import AccessRequestPage from './components/Employee/AccessRequestPage'
+import DashboardPage from './components/Organization/DashboardPage'
+import ResidentDashboardPage from './components/Resident/ResidentDashboardPage'
 
 function App() {
+  if (window.location.pathname === '/resident/dashboard') {
+    return <ResidentDashboardPage />
+  }
+
+  if (window.location.pathname.startsWith('/dashboard')) {
+    return <DashboardPage />
+  }
+
+  if (window.location.pathname === '/employee/dashboard') {
+    return <EmployeeDashboardPage />
+  }
+
+  if (window.location.pathname === '/employee/amenities') {
+    return <AmenityCalendarPage />
+  }
+
+  if (window.location.pathname === '/employee/daily-activity') {
+    return <DailyActivityLogPage />
+  }
+
+  if (window.location.pathname === '/employee/residents') {
+    return <ResidentLookupPage />
+  }
+
+  if (window.location.pathname.startsWith('/employee/access-request')) {
+    return <AccessRequestPage />
+  }
+
   if (window.location.pathname.startsWith('/employee')) {
     return <ShiftNotesPage />
   }
@@ -14,22 +47,7 @@ function App() {
     return <AuthPage />
   }
 
-  return (
-    <div className="min-h-dvh bg-[#F5E9E2] pb-[env(safe-area-inset-bottom)] pt-[env(safe-area-inset-top)] 
-    font-['Inter',system-ui,sans-serif] text-lg leading-relaxed text-[#0B0014] antialiased">
-      <a
-        href="#main"
-        className="sr-only rounded-lg bg-[#0B0014] px-4 py-3 text-[#F5E9E2] focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-10 focus-visible:outline focus-visible:outline-[3px] focus-visible:outline-offset-[3px] focus-visible:outline-[#0B0014]"
-      >
-        Skip to main content
-      </a>
-      <main id="main" className="mx-auto w-full max-w-[72rem] px-5">
-        <HeroSection />
-        <AboutSection />
-        <BenefitsSection />
-      </main>
-    </div>
-  )
+  return <LandingPage />
 }
 
 export default App

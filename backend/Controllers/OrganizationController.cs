@@ -20,6 +20,15 @@ namespace Shiftr.Controllers
             _service = service;
         }
 
+        [HttpGet("mine")]
+        [Authorize(Policy = AuthorizationPolicies.AdminOnly)]
+        public async Task<ActionResult<List<OrganizationModel>>> GetMyOrganizations()
+        {
+            var identityUserId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (identityUserId is null) return Unauthorized();
+            return Ok(await _service.GetOrganizationsForUser(identityUserId));
+        }
+
         [HttpGet("{id:int}")]
         [Authorize(Policy = AuthorizationPolicies.RegularEmployee)]
         public async Task<ActionResult<OrganizationModel>> GetOrganization(int id)

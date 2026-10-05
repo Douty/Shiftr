@@ -5,6 +5,7 @@ namespace Shiftr.Interface
     public interface IOrganizationRepository
     {
         Task<OrganizationModel?> GetByIdAsync(int id);
+        Task<List<OrganizationModel>> GetForUserAsync(string identityUserId);
         Task<OrganizationModel> AddAsync(OrganizationModel organization);
         Task<OrganizationModel?> UpdateAsync(OrganizationModel organization);
         Task<OrganizationDeleteResult> DeleteAsync(int id);

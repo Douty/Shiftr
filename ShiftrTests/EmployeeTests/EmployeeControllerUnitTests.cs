@@ -81,6 +81,8 @@ public class EmployeeControllerUnitTests
 
         public Task<bool> CanAccessEmployee(int employeeId, string identityUserId) => Task.FromResult(true);
 
+        public Task<bool> HasEmployeeProfile(string identityUserId) => Task.FromResult(EmployeeToReturn is not null);
+
         public Task<bool> CanCreateEmployee(EmployeeBase employee, string identityUserId) => Task.FromResult(true);
     }
 

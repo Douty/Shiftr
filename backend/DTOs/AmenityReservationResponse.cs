@@ -5,6 +5,7 @@ namespace Shiftr.DTOs
         int Id,
         int AmenityTypeId,
         string ResidentIdentityUserId,
+        int? ResidentId,
         DateTimeOffset StartsAt,
         DateTimeOffset EndsAt,
         string? Notes);

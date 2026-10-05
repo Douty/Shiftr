@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
+using Shiftr.DTOs;
 using Shiftr.Interface;
 using Shiftr.Models;
 using Shiftr.Security;
@@ -9,7 +10,6 @@ namespace Shiftr.Controllers
 {
     [ApiController]
     [Route("api/properties/{propertyId:int}/residents")]
-    [Authorize(Policy = AuthorizationPolicies.AdminOnly)]
     public class ResidentsController : ControllerBase
     {
         private readonly IResidentService _residentService;
@@ -22,25 +22,41 @@ namespace Shiftr.Controllers
         }
 
         [HttpGet]
-        public async Task<ActionResult<IReadOnlyList<ResidentModel>>> GetResidents(int propertyId, CancellationToken cancellationToken)
+        [Authorize(Policy = AuthorizationPolicies.RegularEmployee)]
+        public async Task<ActionResult<IReadOnlyList<ResidentLookupResponse>>> GetResidents(int propertyId, CancellationToken cancellationToken)
         {
-            var access = await CheckAdminAccess(propertyId);
+            var access = await CheckResidentReadAccess(propertyId);
             if (access is not null) return access;
 
-            return Ok(await _residentService.GetResidents(propertyId, cancellationToken));
+            var residents = await _residentService.GetResidents(propertyId, cancellationToken);
+            return Ok(residents.Select(resident => new ResidentLookupResponse(
+                resident.Id,
+                resident.FirstName,
+                resident.LastName,
+                resident.UnitNumber,
+                !string.IsNullOrWhiteSpace(resident.IdentityUserId))));
         }
 
         [HttpGet("{residentId:int}")]
-        public async Task<ActionResult<ResidentModel>> GetResident(int propertyId, int residentId, CancellationToken cancellationToken)
+        [Authorize(Policy = AuthorizationPolicies.RegularEmployee)]
+        public async Task<ActionResult<ResidentLookupResponse>> GetResident(int propertyId, int residentId, CancellationToken cancellationToken)
         {
-            var access = await CheckAdminAccess(propertyId);
+            var access = await CheckResidentReadAccess(propertyId);
             if (access is not null) return access;
 
             var resident = await _residentService.GetResident(propertyId, residentId, cancellationToken);
-            return resident is null ? NotFound() : Ok(resident);
+            return resident is null
+                ? NotFound()
+                : Ok(new ResidentLookupResponse(
+                    resident.Id,
+                    resident.FirstName,
+                    resident.LastName,
+                    resident.UnitNumber,
+                    !string.IsNullOrWhiteSpace(resident.IdentityUserId)));
         }
 
         [HttpPost]
+        [Authorize(Policy = AuthorizationPolicies.AdminOnly)]
         public async Task<ActionResult<ResidentModel>> CreateResident(int propertyId, ResidentModel resident, CancellationToken cancellationToken)
         {
             var access = await CheckAdminAccess(propertyId);
@@ -53,6 +69,7 @@ namespace Shiftr.Controllers
         }
 
         [HttpPut("{residentId:int}")]
+        [Authorize(Policy = AuthorizationPolicies.AdminOnly)]
         public async Task<ActionResult<ResidentModel>> UpdateResident(int propertyId, int residentId, ResidentModel resident, CancellationToken cancellationToken)
         {
             if (residentId != resident.Id) return BadRequest();
@@ -64,6 +81,7 @@ namespace Shiftr.Controllers
         }
 
         [HttpPost("{residentId:int}/allowed-guests")]
+        [Authorize(Policy = AuthorizationPolicies.AdminOnly)]
         public async Task<ActionResult<ResidentModel>> AddAllowedGuest(int propertyId, int residentId, [FromBody] string guestName, CancellationToken cancellationToken)
         {
             if (string.IsNullOrWhiteSpace(guestName)) return BadRequest();
@@ -75,6 +93,7 @@ namespace Shiftr.Controllers
         }
 
         [HttpDelete("{residentId:int}/allowed-guests")]
+        [Authorize(Policy = AuthorizationPolicies.AdminOnly)]
         public async Task<ActionResult<ResidentModel>> RemoveAllowedGuest(int propertyId, int residentId, [FromQuery] string guestName, CancellationToken cancellationToken)
         {
             if (string.IsNullOrWhiteSpace(guestName)) return BadRequest();
@@ -86,6 +105,7 @@ namespace Shiftr.Controllers
         }
 
         [HttpPut("{residentId:int}/call-to-notify")]
+        [Authorize(Policy = AuthorizationPolicies.AdminOnly)]
         public async Task<ActionResult<ResidentModel>> SetCallToNotify(int propertyId, int residentId, [FromBody] bool callToNotify, CancellationToken cancellationToken)
         {
             var access = await CheckAdminAccess(propertyId);
@@ -96,6 +116,7 @@ namespace Shiftr.Controllers
         }
 
         [HttpDelete("{residentId:int}")]
+        [Authorize(Policy = AuthorizationPolicies.AdminOnly)]
         public async Task<IActionResult> DeleteResident(int propertyId, int residentId, CancellationToken cancellationToken)
         {
             var access = await CheckAdminAccess(propertyId);
@@ -113,6 +134,18 @@ namespace Shiftr.Controllers
             return identityUserId is null || !await _propertyService.CanManageProperty(propertyId, identityUserId)
                 ? Forbid()
                 : null;
+        }
+
+        private async Task<ActionResult?> CheckResidentReadAccess(int propertyId)
+        {
+            if (await _propertyService.GetPropertyById(propertyId) is null) return NotFound();
+            var identityUserId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (identityUserId is null) return Forbid();
+
+            var hasAccess = User.IsInRole(IdentityRoles.Owner)
+                ? await _propertyService.CanAccessProperty(propertyId, identityUserId)
+                : await _propertyService.CanAccessAssignedProperty(propertyId, identityUserId);
+            return hasAccess ? null : Forbid();
         }
     }
 }

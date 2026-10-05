@@ -41,6 +41,9 @@ namespace Shiftr.Services
                 await _organizationRepository.HasAdminAccessAsync(organizationId.Value, identityUserId);
         }
 
+        public Task<bool> HasEmployeeProfile(string identityUserId) =>
+            _Repository.HasIdentityProfileAsync(identityUserId);
+
         public async Task<bool> CanCreateEmployee(EmployeeBase employee, string identityUserId)
         {
             int? organizationId = employee switch

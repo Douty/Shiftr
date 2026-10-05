@@ -9,6 +9,7 @@ namespace Shiftr.Interface
         Task<EmployeeBase?> UpdateEmployee(EmployeeBase Employee);
         Task<bool> DeleteEmployee(int Id);
         Task<bool> CanAccessEmployee(int employeeId, string identityUserId);
+        Task<bool> HasEmployeeProfile(string identityUserId);
         Task<bool> CanCreateEmployee(EmployeeBase employee, string identityUserId);
         bool IsAdmin(EmployeeBase Employee);
         bool IsOwner(EmployeeBase Employee);

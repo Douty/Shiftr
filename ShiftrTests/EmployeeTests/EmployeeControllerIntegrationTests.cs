@@ -308,11 +308,62 @@ public sealed class EmployeeControllerIntegrationTests : IClassFixture<ApiTestFa
     }
 
     [Fact]
+    public async Task OwnerSignup_CreatesOrganizationAndOwnerAccountWithoutInviteCode()
+    {
+        using var client = _factory.CreateClient();
+        var email = $"{Guid.NewGuid():N}@example.com";
+        const string password = "Secure-Pass123!";
+
+        using var registerResponse = await client.PostAsJsonAsync("/register", new
+        {
+            email,
+            password,
+            createOrganization = true
+        });
+        Assert.Equal(HttpStatusCode.OK, registerResponse.StatusCode);
+
+        await SetBearerTokenAsync(client, email, password);
+        using var signupResponse = await client.PostAsJsonAsync("/api/owner-signup", new
+        {
+            organizationName = "Northstar",
+            firstName = "Casey",
+            lastName = "Morgan",
+            phoneNumber = "555-0101"
+        });
+
+        Assert.Equal(HttpStatusCode.Created, signupResponse.StatusCode);
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var services = scope.ServiceProvider;
+            var userManager = services.GetRequiredService<UserManager<IdentityUser>>();
+            var user = await userManager.FindByEmailAsync(email);
+            Assert.NotNull(user);
+            Assert.True(await userManager.IsInRoleAsync(user!, IdentityRoles.Owner));
+
+            var database = services.GetRequiredService<ShiftrDbContext>();
+            var owner = await database.Employees.OfType<OwnerModel>()
+                .SingleAsync(employee => employee.IdentityUserId == user!.Id);
+            Assert.Equal("Casey", owner.FirstName);
+            Assert.Equal("Morgan", owner.LastName);
+
+            var organization = await database.Organizations
+                .SingleAsync(existing => existing.Id == owner.OrganizationID);
+            Assert.Equal("Northstar", organization.Name);
+        }
+
+        await SetBearerTokenAsync(client, email, password);
+        using var ownerResponse = await client.GetAsync("/api/Employee/IsOwner");
+        Assert.Equal(HttpStatusCode.OK, ownerResponse.StatusCode);
+        Assert.True(await ownerResponse.Content.ReadFromJsonAsync<bool>());
+    }
+
+    [Fact]
     public async Task FrontDeskEmployee_CanCreateReadUpdateAndDeleteShiftNotes()
     {
         using var client = _factory.CreateClient();
         var email = $"{Guid.NewGuid():N}@example.com";
         const string password = "Secure-Pass123!";
+        int propertyId;
 
         using var registerResponse = await client.PostAsJsonAsync("/register", new
         {
@@ -334,6 +385,15 @@ public sealed class EmployeeControllerIntegrationTests : IClassFixture<ApiTestFa
             var property = new PropertyModel { Name = "Shift Notes Test Property" };
             database.Properties.Add(property);
             await database.SaveChangesAsync();
+            propertyId = property.Id;
+            database.Residents.Add(new ResidentModel
+            {
+                PropertyId = propertyId,
+                FirstName = "Jordan",
+                LastName = "Lee",
+                UnitNumber = "204",
+                AllowedGuests = ["Private guest"]
+            });
             database.Employees.Add(new FrontDeskAgentModel
             {
                 FirstName = "Riley",
@@ -347,6 +407,25 @@ public sealed class EmployeeControllerIntegrationTests : IClassFixture<ApiTestFa
         }
 
         await SetBearerTokenAsync(client, email, password);
+        using var residentLookupResponse = await client.GetAsync($"/api/properties/{propertyId}/residents");
+        Assert.Equal(HttpStatusCode.OK, residentLookupResponse.StatusCode);
+        using var residentLookupDocument = JsonDocument.Parse(await residentLookupResponse.Content.ReadAsStringAsync());
+        var residentLookup = Assert.Single(residentLookupDocument.RootElement.EnumerateArray());
+        Assert.Equal("Jordan", residentLookup.GetProperty("firstName").GetString());
+        Assert.Equal("Lee", residentLookup.GetProperty("lastName").GetString());
+        Assert.Equal("204", residentLookup.GetProperty("unitNumber").GetString());
+        Assert.False(residentLookup.TryGetProperty("allowedGuests", out _));
+
+        using var residentEditResponse = await client.PostAsJsonAsync(
+            $"/api/properties/{propertyId}/residents",
+            new ResidentModel
+            {
+                PropertyId = propertyId,
+                FirstName = "New",
+                LastName = "Resident"
+            });
+        Assert.Equal(HttpStatusCode.Forbidden, residentEditResponse.StatusCode);
+
         using var createResponse = await client.PostAsJsonAsync("/api/shift-notes", new
         {
             title = "Package room",
@@ -371,6 +450,126 @@ public sealed class EmployeeControllerIntegrationTests : IClassFixture<ApiTestFa
         using var deletedReadResponse = await client.GetAsync($"/api/shift-notes/{noteId}");
         Assert.Equal(HttpStatusCode.NoContent, deleteResponse.StatusCode);
         Assert.Equal(HttpStatusCode.NotFound, deletedReadResponse.StatusCode);
+    }
+
+    [Fact]
+    public async Task ManagerCanManageAssignedPropertyBookingsAndDailyNotes()
+    {
+        await ResetEmployeesAsync();
+        using var client = await CreateAdminClientAsync();
+        var propertyId = int.Parse(client.DefaultRequestHeaders.GetValues("X-Test-Property-Id").Single());
+        var organizationId = int.Parse(client.DefaultRequestHeaders.GetValues("X-Test-Organization-Id").Single());
+        int amenityId;
+        int residentId;
+        int otherPropertyId;
+
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var database = scope.ServiceProvider.GetRequiredService<ShiftrDbContext>();
+            var organization = await database.Organizations
+                .Include(item => item.Properties)
+                .SingleAsync(item => item.Id == organizationId);
+            var otherProperty = new PropertyModel { Name = "Other assigned-organization property" };
+            organization.Properties.Add(otherProperty);
+            await database.SaveChangesAsync();
+            otherPropertyId = otherProperty.Id;
+
+            var resident = new IdentityUser
+            {
+                UserName = $"resident-{Guid.NewGuid():N}@example.com",
+                Email = $"resident-{Guid.NewGuid():N}@example.com"
+            };
+            database.Users.Add(resident);
+            var residentModel = new ResidentModel
+            {
+                PropertyId = propertyId,
+                FirstName = "Avery",
+                LastName = "Chen",
+                UnitNumber = "305",
+                IdentityUserId = resident.Id
+            };
+            database.Residents.Add(residentModel);
+
+            var amenity = new AmenityTypeModel
+            {
+                PropertyId = propertyId,
+                Name = "Pool"
+            };
+            database.Amenities.Add(amenity);
+            await database.SaveChangesAsync();
+            amenityId = amenity.Id;
+            residentId = residentModel.Id;
+
+            database.AmenityReservations.Add(new AmenityReservationModel
+            {
+                AmenityTypeId = amenity.Id,
+                ResidentIdentityUserId = resident.Id,
+                StartsAt = DateTimeOffset.UtcNow.AddHours(1),
+                EndsAt = DateTimeOffset.UtcNow.AddHours(2)
+            });
+            await database.SaveChangesAsync();
+        }
+
+        using var assignmentResponse = await client.GetAsync("/api/shift-notes/assignment");
+        Assert.Equal(HttpStatusCode.OK, assignmentResponse.StatusCode);
+        Assert.Equal(
+            propertyId,
+            (await assignmentResponse.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("propertyId").GetInt32());
+
+        using var createNoteResponse = await client.PostAsJsonAsync("/api/shift-notes", new
+        {
+            title = "Evening handoff",
+            content = "Pool closed for cleaning."
+        });
+        Assert.Equal(HttpStatusCode.Created, createNoteResponse.StatusCode);
+
+        using var reservationsResponse = await client.GetAsync($"/api/properties/{propertyId}/reservations");
+        Assert.Equal(HttpStatusCode.OK, reservationsResponse.StatusCode);
+        using var reservationsDocument = JsonDocument.Parse(await reservationsResponse.Content.ReadAsStringAsync());
+        var existingReservation = Assert.Single(reservationsDocument.RootElement.EnumerateArray());
+        Assert.Equal(residentId, existingReservation.GetProperty("residentId").GetInt32());
+
+        using var otherPropertyResponse = await client.GetAsync($"/api/properties/{otherPropertyId}/reservations");
+        Assert.Equal(HttpStatusCode.Forbidden, otherPropertyResponse.StatusCode);
+
+        using var residentLookupResponse = await client.GetAsync($"/api/properties/{propertyId}/residents");
+        Assert.Equal(HttpStatusCode.OK, residentLookupResponse.StatusCode);
+        using var residentLookupDocument = JsonDocument.Parse(await residentLookupResponse.Content.ReadAsStringAsync());
+        Assert.Equal("Avery", Assert.Single(residentLookupDocument.RootElement.EnumerateArray())
+            .GetProperty("firstName").GetString());
+
+        using var otherPropertyResidentsResponse = await client.GetAsync($"/api/properties/{otherPropertyId}/residents");
+        Assert.Equal(HttpStatusCode.Forbidden, otherPropertyResidentsResponse.StatusCode);
+
+        using var createReservationResponse = await client.PostAsJsonAsync(
+            $"/api/properties/{propertyId}/reservations",
+            new
+            {
+                amenityTypeId = amenityId,
+                residentId,
+                startsAt = DateTimeOffset.UtcNow.AddHours(3),
+                endsAt = DateTimeOffset.UtcNow.AddHours(4)
+            });
+        Assert.Equal(HttpStatusCode.Created, createReservationResponse.StatusCode);
+        using var createdReservationDocument = JsonDocument.Parse(await createReservationResponse.Content.ReadAsStringAsync());
+        var createdReservationId = createdReservationDocument.RootElement.GetProperty("id").GetInt32();
+        Assert.Equal(residentId, createdReservationDocument.RootElement.GetProperty("residentId").GetInt32());
+
+        using var updateReservationResponse = await client.PutAsJsonAsync(
+            $"/api/properties/{propertyId}/reservations/{createdReservationId}",
+            new
+            {
+                amenityTypeId = amenityId,
+                residentId,
+                startsAt = DateTimeOffset.UtcNow.AddHours(4),
+                endsAt = DateTimeOffset.UtcNow.AddHours(5),
+                notes = "Resident confirmed new time."
+            });
+        Assert.Equal(HttpStatusCode.OK, updateReservationResponse.StatusCode);
+
+        using var deleteReservationResponse = await client.DeleteAsync(
+            $"/api/properties/{propertyId}/reservations/{createdReservationId}");
+        Assert.Equal(HttpStatusCode.NoContent, deleteReservationResponse.StatusCode);
     }
 
     [Fact]
@@ -403,6 +602,76 @@ public sealed class EmployeeControllerIntegrationTests : IClassFixture<ApiTestFa
         {
             Assert.True(await roleManager.RoleExistsAsync(role));
         }
+    }
+
+    [Fact]
+    public async Task EmployeeAccessRequest_CanBeSubmittedApprovedAndAppliedToIdentity()
+    {
+        using var adminClient = await CreateAdminClientAsync();
+        var propertyId = int.Parse(adminClient.DefaultRequestHeaders.GetValues("X-Test-Property-Id").Single());
+        var organizationId = int.Parse(adminClient.DefaultRequestHeaders.GetValues("X-Test-Organization-Id").Single());
+        string employeeInviteCode;
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var database = scope.ServiceProvider.GetRequiredService<ShiftrDbContext>();
+            employeeInviteCode = await database.Properties
+                .Where(property => property.Id == propertyId)
+                .Select(property => property.EmployeeInviteId)
+                .SingleAsync();
+        }
+
+        var email = $"{Guid.NewGuid():N}@example.com";
+        const string password = "Secure-Pass123!";
+        using var requesterClient = _factory.CreateClient();
+        using var registerResponse = await requesterClient.PostAsJsonAsync("/register", new
+        {
+            email,
+            password,
+            inviteCode = ApiTestFactory.RegistrationInviteCode
+        });
+        Assert.Equal(HttpStatusCode.OK, registerResponse.StatusCode);
+        await SetBearerTokenAsync(requesterClient, email, password);
+
+        using var createRequestResponse = await requesterClient.PostAsJsonAsync(
+            "/api/employee-access-requests",
+            new
+            {
+                employeeInviteCode,
+                firstName = "Casey",
+                lastName = "Morgan",
+                phoneNumber = "555-0144",
+                role = "Manager"
+            });
+        Assert.Equal(HttpStatusCode.Accepted, createRequestResponse.StatusCode);
+        using var createdRequestDocument = JsonDocument.Parse(await createRequestResponse.Content.ReadAsStringAsync());
+        var requestId = createdRequestDocument.RootElement.GetProperty("id").GetInt32();
+
+        using var pendingResponse = await adminClient.GetAsync($"/api/employee-access-requests/organizations/{organizationId}");
+        Assert.Equal(HttpStatusCode.OK, pendingResponse.StatusCode);
+        using var pendingDocument = JsonDocument.Parse(await pendingResponse.Content.ReadAsStringAsync());
+        Assert.Equal(requestId, pendingDocument.RootElement[0].GetProperty("id").GetInt32());
+
+        using var approveResponse = await adminClient.PostAsync($"/api/employee-access-requests/{requestId}/approve", null);
+        Assert.Equal(HttpStatusCode.NoContent, approveResponse.StatusCode);
+
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var database = scope.ServiceProvider.GetRequiredService<ShiftrDbContext>();
+            var request = await database.EmployeeAccessRequests.SingleAsync(item => item.Id == requestId);
+            var employee = await database.Employees.OfType<ManagerModel>()
+                .SingleAsync(item => item.IdentityUserId != null && item.Email == email);
+            Assert.Equal(EmployeeAccessRequestStatus.Approved, request.Status);
+            Assert.Equal(propertyId, employee.PropteryId);
+        }
+
+        await SetBearerTokenAsync(requesterClient, email, password);
+        using var statusResponse = await requesterClient.GetAsync("/api/employee-access-requests/mine");
+        using var adminStatusResponse = await requesterClient.GetAsync("/api/Employee/IsAdmin");
+        using var profileResponse = await requesterClient.GetAsync("/api/Employee/HasProfile");
+        Assert.Equal(HttpStatusCode.OK, statusResponse.StatusCode);
+        Assert.Equal("Approved", JsonDocument.Parse(await statusResponse.Content.ReadAsStringAsync()).RootElement.GetProperty("status").GetString());
+        Assert.True(await adminStatusResponse.Content.ReadFromJsonAsync<bool>());
+        Assert.True(await profileResponse.Content.ReadFromJsonAsync<bool>());
     }
 
     [Fact]

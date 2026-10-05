@@ -27,6 +27,14 @@ public class OrganizationControllerTests
         public Task<OrganizationModel?> GetOrganizationById(int id) =>
             Task.FromResult(OrganizationToReturn);
 
+        public string? IdentityUserIdPassedToList { get; private set; }
+
+        public Task<List<OrganizationModel>> GetOrganizationsForUser(string identityUserId)
+        {
+            IdentityUserIdPassedToList = identityUserId;
+            return Task.FromResult(OrganizationToReturn is null ? new List<OrganizationModel>() : new List<OrganizationModel> { OrganizationToReturn });
+        }
+
         public Task<OrganizationModel> CreateOrganization(OrganizationModel organization)
         {
             OrganizationPassedToCreate = organization;
@@ -70,6 +78,7 @@ public class OrganizationControllerTests
 
     [Theory]
     [InlineData(nameof(OrganizationController.GetOrganization), AuthorizationPolicies.RegularEmployee)]
+    [InlineData(nameof(OrganizationController.GetMyOrganizations), AuthorizationPolicies.AdminOnly)]
     [InlineData(nameof(OrganizationController.CreateOrganization), AuthorizationPolicies.OwnerOnly)]
     [InlineData(nameof(OrganizationController.UpdateOrganization), AuthorizationPolicies.OwnerOnly)]
     [InlineData(nameof(OrganizationController.DeleteOrganization), AuthorizationPolicies.OwnerOnly)]
@@ -84,6 +93,20 @@ public class OrganizationControllerTests
             .Single();
 
         Assert.Equal(expectedPolicy, authorization.Policy);
+    }
+
+    [Fact]
+    public async Task GetMyOrganizations_QueriesForSignedInIdentity()
+    {
+        var organization = new OrganizationModel { Id = 8, Name = "Northstar" };
+        var service = new FakeOrganizationService { OrganizationToReturn = organization };
+        var controller = CreateController(service);
+
+        var result = await controller.GetMyOrganizations();
+
+        var response = Assert.IsType<OkObjectResult>(result.Result);
+        Assert.Equal("identity-1", service.IdentityUserIdPassedToList);
+        Assert.Equal(new[] { organization }, Assert.IsType<List<OrganizationModel>>(response.Value));
     }
 
     [Fact]

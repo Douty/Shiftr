@@ -26,6 +26,26 @@ namespace Shiftr.Repository
                 resident => resident.PropertyId == propertyId && resident.Id == residentId,
                 cancellationToken);
 
+        public Task<ResidentModel?> GetByIdentityUserIdAsync(string identityUserId, CancellationToken cancellationToken = default) =>
+            _context.Residents
+                .Include(resident => resident.Property)
+                .FirstOrDefaultAsync(resident => resident.IdentityUserId == identityUserId, cancellationToken);
+
+        public async Task<ResidentModel?> UpdatePreferencesAsync(
+            string identityUserId,
+            bool callToNotify,
+            List<string> allowedGuests,
+            CancellationToken cancellationToken = default)
+        {
+            var resident = await GetByIdentityUserIdAsync(identityUserId, cancellationToken);
+            if (resident is null) return null;
+
+            resident.CallToNotify = callToNotify;
+            resident.AllowedGuests = allowedGuests;
+            await _context.SaveChangesAsync(cancellationToken);
+            return resident;
+        }
+
         public async Task<ResidentModel?> AddAsync(int propertyId, ResidentModel resident, CancellationToken cancellationToken = default)
         {
             if (!await _context.Properties.AnyAsync(property => property.Id == propertyId, cancellationToken)) return null;

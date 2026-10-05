@@ -11,6 +11,7 @@ namespace Shiftr.Interface
         Task<EmployeeBase?> UpdateAsync(EmployeeBase employee);
         Task<bool> DeleteAsync(int Id);
         Task<bool> IsLinkedToIdentityAsync(int employeeId, string identityUserId);
+        Task<bool> HasIdentityProfileAsync(string identityUserId);
         
     }
 }

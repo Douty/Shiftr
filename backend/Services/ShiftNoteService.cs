@@ -12,8 +12,8 @@ namespace Shiftr.Services
             _repository = repository;
         }
 
-        public Task<(int EmployeeId, int PropertyId)?> GetFrontDeskAssignmentAsync(string identityUserId, CancellationToken cancellationToken) =>
-            _repository.GetFrontDeskAssignmentAsync(identityUserId, cancellationToken);
+        public Task<(int EmployeeId, int PropertyId)?> GetEmployeeAssignmentAsync(string identityUserId, CancellationToken cancellationToken) =>
+            _repository.GetEmployeeAssignmentAsync(identityUserId, cancellationToken);
 
         public Task<IReadOnlyList<ShiftNoteModel>> GetNotesAsync(int propertyId, CancellationToken cancellationToken) =>
             _repository.GetByPropertyAsync(propertyId, cancellationToken);

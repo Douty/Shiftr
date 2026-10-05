@@ -23,6 +23,7 @@ namespace Shiftr.Middleware
             }
 
             string? inviteCode;
+            var createsOrganization = false;
             context.Request.EnableBuffering();
             try
             {
@@ -34,6 +35,9 @@ namespace Shiftr.Middleware
                     inviteCodeElement.ValueKind == JsonValueKind.String
                         ? inviteCodeElement.GetString()?.Trim()
                         : null;
+                createsOrganization = payload.RootElement.ValueKind == JsonValueKind.Object &&
+                    payload.RootElement.TryGetProperty("createOrganization", out var createOrganizationElement) &&
+                    createOrganizationElement.ValueKind == JsonValueKind.True;
             }
             catch (JsonException)
             {
@@ -46,6 +50,12 @@ namespace Shiftr.Middleware
                 {
                     context.Request.Body.Position = 0;
                 }
+            }
+
+            if (createsOrganization)
+            {
+                await _next(context);
+                return;
             }
 
             if (string.IsNullOrWhiteSpace(inviteCode) ||

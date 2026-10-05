@@ -86,5 +86,12 @@ namespace Shiftr.Repository
                 property.Id == propertyId &&
             property.FrontDeskAgents.Any(agent => agent.IdentityUserId == identityUserId),
             cancellationToken);
+
+        public Task<bool> IsEmployeeAssignedToPropertyAsync(int propertyId, string identityUserId, CancellationToken cancellationToken = default) =>
+            _context.Properties.AnyAsync(property =>
+                property.Id == propertyId &&
+                (property.Managers.Any(manager => manager.IdentityUserId == identityUserId) ||
+                 property.FrontDeskAgents.Any(agent => agent.IdentityUserId == identityUserId)),
+                cancellationToken);
     }
 }

@@ -18,6 +18,16 @@ namespace Shiftr.Services
         public Task<ResidentModel?> GetResident(int propertyId, int residentId, CancellationToken cancellationToken = default) =>
             _repository.GetByIdAsync(propertyId, residentId, cancellationToken);
 
+        public Task<ResidentModel?> GetResidentByIdentityUserId(string identityUserId, CancellationToken cancellationToken = default) =>
+            _repository.GetByIdentityUserIdAsync(identityUserId, cancellationToken);
+
+        public Task<ResidentModel?> UpdatePreferences(
+            string identityUserId,
+            bool callToNotify,
+            List<string> allowedGuests,
+            CancellationToken cancellationToken = default) =>
+            _repository.UpdatePreferencesAsync(identityUserId, callToNotify, allowedGuests, cancellationToken);
+
         public Task<ResidentModel?> CreateResident(int propertyId, ResidentModel resident, CancellationToken cancellationToken = default) =>
             _repository.AddAsync(propertyId, resident, cancellationToken);
 

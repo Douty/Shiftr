@@ -8,8 +8,8 @@ namespace Shiftr.DTOs
         [Range(1, int.MaxValue)]
         public required int AmenityTypeId { get; init; }
 
-        [Required]
-        public required string ResidentIdentityUserId { get; init; }
+        public string? ResidentIdentityUserId { get; init; }
+        public int? ResidentId { get; init; }
 
         public required DateTimeOffset StartsAt { get; init; }
         public required DateTimeOffset EndsAt { get; init; }

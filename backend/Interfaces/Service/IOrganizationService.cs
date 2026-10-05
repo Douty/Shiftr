@@ -5,6 +5,7 @@ namespace Shiftr.Interface
     public interface IOrganizationService
     {
         Task<OrganizationModel?> GetOrganizationById(int id);
+        Task<List<OrganizationModel>> GetOrganizationsForUser(string identityUserId);
         Task<OrganizationModel> CreateOrganization(OrganizationModel organization);
         Task<OrganizationModel?> UpdateOrganization(OrganizationModel organization);
         Task<OrganizationDeleteResult> DeleteOrganization(int id);

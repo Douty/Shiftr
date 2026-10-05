@@ -41,6 +41,9 @@ namespace Shiftr.Services
                 await _organizationRepository.HasMemberAsync(organizationId.Value, identityUserId);
         }
 
+        public Task<bool> CanAccessAssignedProperty(int propertyId, string identityUserId, CancellationToken cancellationToken = default) =>
+            _repository.IsEmployeeAssignedToPropertyAsync(propertyId, identityUserId, cancellationToken);
+
         public async Task<bool> CanManageProperty(int propertyId, string identityUserId)
         {
             var organizationId = await _organizationRepository.GetOrganizationIdForPropertyAsync(propertyId);

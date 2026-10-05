@@ -22,14 +22,20 @@ public class AmenityAuthorizationTests
         Assert.Equal(AuthorizationPolicies.AdminOnly, authorization.Policy);
     }
 
-    [Fact]
-    public void ReservationControllerRequiresFrontDeskRole()
+    [Theory]
+    [InlineData(nameof(AmenityReservationsController.CreateReservation))]
+    [InlineData(nameof(AmenityReservationsController.UpdateReservation))]
+    [InlineData(nameof(AmenityReservationsController.DeleteReservation))]
+    public void ReservationMutationsAllowOwnersFrontDeskAndAdmins(string actionName)
     {
-        var authorization = typeof(AmenityReservationsController)
+        var action = typeof(AmenityReservationsController).GetMethod(actionName);
+        var authorization = action!
             .GetCustomAttributes(typeof(AuthorizeAttribute), inherit: true)
             .Cast<AuthorizeAttribute>()
             .Single();
 
-        Assert.Equal(IdentityRoles.FrontDesk, authorization.Roles);
+        Assert.Equal(
+            string.Join(",", IdentityRoles.Owner, IdentityRoles.FrontDesk, IdentityRoles.Admin),
+            authorization.Roles);
     }
 }

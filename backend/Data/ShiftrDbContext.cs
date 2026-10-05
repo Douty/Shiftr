@@ -19,6 +19,7 @@ namespace Shiftr.Data
         public DbSet<AmenityTypeModel> Amenities => Set<AmenityTypeModel>();
         public DbSet<AmenityReservationModel> AmenityReservations => Set<AmenityReservationModel>();
         public DbSet<ShiftNoteModel> ShiftNotes => Set<ShiftNoteModel>();
+        public DbSet<EmployeeAccessRequestModel> EmployeeAccessRequests => Set<EmployeeAccessRequestModel>();
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -99,6 +100,19 @@ namespace Shiftr.Data
                 .OnDelete(DeleteBehavior.Restrict);
             modelBuilder.Entity<ShiftNoteModel>()
                 .HasIndex(note => new { note.PropertyId, note.UpdatedAt });
+
+            modelBuilder.Entity<EmployeeAccessRequestModel>()
+                .HasOne(request => request.Property)
+                .WithMany()
+                .HasForeignKey(request => request.PropertyId)
+                .OnDelete(DeleteBehavior.Cascade);
+            modelBuilder.Entity<EmployeeAccessRequestModel>()
+                .HasOne<IdentityUser>()
+                .WithMany()
+                .HasForeignKey(request => request.IdentityUserId)
+                .OnDelete(DeleteBehavior.Cascade);
+            modelBuilder.Entity<EmployeeAccessRequestModel>()
+                .HasIndex(request => new { request.PropertyId, request.Status });
 
             var shiftListConverter = new ValueConverter<List<Shift>, string>(
                 shifts => JsonSerializer.Serialize(shifts),

@@ -14,14 +14,27 @@ namespace Shiftr.Repository
             _context = context;
         }
 
-        public async Task<(int EmployeeId, int PropertyId)?> GetFrontDeskAssignmentAsync(string identityUserId, CancellationToken cancellationToken) =>
-            await _context.Employees
+        public async Task<(int EmployeeId, int PropertyId)?> GetEmployeeAssignmentAsync(string identityUserId, CancellationToken cancellationToken)
+        {
+            var managerAssignment = await _context.Employees
+                .OfType<ManagerModel>()
+                .Where(employee => employee.IdentityUserId == identityUserId)
+                .Select(employee => new { employee.Id, employee.PropteryId })
+                .FirstOrDefaultAsync(cancellationToken);
+            if (managerAssignment is not null)
+            {
+                return (managerAssignment.Id, managerAssignment.PropteryId);
+            }
+
+            var frontDeskAssignment = await _context.Employees
                 .OfType<FrontDeskAgentModel>()
                 .Where(employee => employee.IdentityUserId == identityUserId)
-                .Select(employee => new ValueTuple<int, int>(employee.Id, employee.PropteryId))
-                .FirstOrDefaultAsync(cancellationToken) is var assignment && assignment != default
-                    ? assignment
-                    : null;
+                .Select(employee => new { employee.Id, employee.PropteryId })
+                .FirstOrDefaultAsync(cancellationToken);
+            return frontDeskAssignment is null
+                ? null
+                : (frontDeskAssignment.Id, frontDeskAssignment.PropteryId);
+        }
 
         public async Task<IReadOnlyList<ShiftNoteModel>> GetByPropertyAsync(int propertyId, CancellationToken cancellationToken) =>
             await _context.ShiftNotes

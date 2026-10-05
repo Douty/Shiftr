@@ -25,6 +25,17 @@ namespace Shiftr.Controllers
             if (identityUserId is null || !await _service.CanAccessEmployee(id, identityUserId)) return Forbid();
             return Ok(employee);
         }
+
+        [HttpGet("HasProfile")]
+        [Authorize]
+        public async Task<ActionResult<bool>> HasProfile()
+        {
+            var identityUserId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            return identityUserId is null
+                ? Unauthorized()
+                : Ok(await _service.HasEmployeeProfile(identityUserId));
+        }
+
         [HttpPost("Create")]
         [Authorize(Policy = AuthorizationPolicies.AdminOnly)]
 

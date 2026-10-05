@@ -13,10 +13,10 @@ export default defineConfig({
   server: {
     proxy: {
       '/api': {
-        target: 'https://localhost:7231',
+        target: 'http://localhost:5282',
         changeOrigin: true,
-        secure: false,
-        rewrite: path => path.replace(/^\/api/, '')
+        // ASP.NET Identity maps these two endpoints at the root, unlike controllers.
+        rewrite: path => path.replace(/^\/api(?=\/(?:login|register)(?:\/|$|\?))/, '')
       }
     }
   }

@@ -110,4 +110,76 @@ public sealed class AmenityReservationAuthorizationIntegrationTests : IClassFixt
         Assert.Equal(AmenityReservationResult.Success, adjacentResult);
         Assert.NotNull(adjacentReservation);
     }
+
+    [Fact]
+    public async Task ResidentsCanOnlyViewUpdateAndCancelTheirOwnReservations()
+    {
+        int propertyId;
+        string firstResidentIdentityUserId;
+        string secondResidentIdentityUserId;
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var database = scope.ServiceProvider.GetRequiredService<ShiftrDbContext>();
+            var property = new PropertyModel { Name = $"Resident booking access {Guid.NewGuid():N}" };
+            var firstResident = new IdentityUser
+            {
+                UserName = $"resident-one-{Guid.NewGuid():N}@example.com",
+                Email = $"resident-one-{Guid.NewGuid():N}@example.com"
+            };
+            var secondResident = new IdentityUser
+            {
+                UserName = $"resident-two-{Guid.NewGuid():N}@example.com",
+                Email = $"resident-two-{Guid.NewGuid():N}@example.com"
+            };
+            database.Properties.Add(property);
+            database.Users.AddRange(firstResident, secondResident);
+            await database.SaveChangesAsync();
+            propertyId = property.Id;
+            firstResidentIdentityUserId = firstResident.Id;
+            secondResidentIdentityUserId = secondResident.Id;
+        }
+
+        using var serviceScope = _factory.Services.CreateScope();
+        var amenityService = serviceScope.ServiceProvider.GetRequiredService<IAmenityService>();
+        var (amenity, nameConflict) = await amenityService.CreateAmenity(propertyId, "Community room", null);
+        Assert.False(nameConflict);
+        Assert.NotNull(amenity);
+
+        var startsAt = new DateTimeOffset(2026, 10, 3, 14, 0, 0, TimeSpan.Zero);
+        var (firstResult, firstReservation) = await amenityService.CreateReservation(
+            propertyId, amenity!.Id, firstResidentIdentityUserId, startsAt, startsAt.AddHours(1), null);
+        var (secondResult, secondReservation) = await amenityService.CreateReservation(
+            propertyId, amenity.Id, secondResidentIdentityUserId, startsAt.AddHours(2), startsAt.AddHours(3), null);
+
+        Assert.Equal(AmenityReservationResult.Success, firstResult);
+        Assert.Equal(AmenityReservationResult.Success, secondResult);
+        Assert.Single(await amenityService.GetReservationsForResident(propertyId, firstResidentIdentityUserId));
+
+        var (unauthorizedUpdateResult, _) = await amenityService.UpdateResidentReservation(
+            propertyId,
+            secondReservation!.Id,
+            amenity.Id,
+            firstResidentIdentityUserId,
+            startsAt.AddHours(4),
+            startsAt.AddHours(5),
+            null);
+        var deletedAnotherResidentReservation = await amenityService.DeleteResidentReservation(
+            propertyId, secondReservation.Id, firstResidentIdentityUserId);
+        var (updateResult, updatedReservation) = await amenityService.UpdateResidentReservation(
+            propertyId,
+            firstReservation!.Id,
+            amenity.Id,
+            firstResidentIdentityUserId,
+            startsAt.AddHours(4),
+            startsAt.AddHours(5),
+            "Updated by resident");
+        var deletedOwnReservation = await amenityService.DeleteResidentReservation(
+            propertyId, firstReservation.Id, firstResidentIdentityUserId);
+
+        Assert.Equal(AmenityReservationResult.NotFound, unauthorizedUpdateResult);
+        Assert.False(deletedAnotherResidentReservation);
+        Assert.Equal(AmenityReservationResult.Success, updateResult);
+        Assert.Equal("Updated by resident", updatedReservation!.Notes);
+        Assert.True(deletedOwnReservation);
+    }
 }

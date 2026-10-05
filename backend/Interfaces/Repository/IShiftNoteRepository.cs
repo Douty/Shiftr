@@ -4,7 +4,7 @@ namespace Shiftr.Interface
 {
     public interface IShiftNoteRepository
     {
-        Task<(int EmployeeId, int PropertyId)?> GetFrontDeskAssignmentAsync(string identityUserId, CancellationToken cancellationToken);
+        Task<(int EmployeeId, int PropertyId)?> GetEmployeeAssignmentAsync(string identityUserId, CancellationToken cancellationToken);
         Task<IReadOnlyList<ShiftNoteModel>> GetByPropertyAsync(int propertyId, CancellationToken cancellationToken);
         Task<ShiftNoteModel?> GetByIdAsync(int propertyId, int noteId, CancellationToken cancellationToken);
         Task<ShiftNoteModel> AddAsync(ShiftNoteModel note, CancellationToken cancellationToken);

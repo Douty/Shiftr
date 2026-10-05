@@ -48,6 +48,9 @@ namespace Shiftr.Repository
             _context.Employees.AnyAsync(employee =>
                 employee.Id == employeeId && employee.IdentityUserId == identityUserId);
 
+        public Task<bool> HasIdentityProfileAsync(string identityUserId) =>
+            _context.Employees.AnyAsync(employee => employee.IdentityUserId == identityUserId);
+
        
         public async Task<EmployeeBase?> UpdateAsync(EmployeeBase employee)
         {
