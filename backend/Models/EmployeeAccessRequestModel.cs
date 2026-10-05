@@ -9,6 +9,7 @@ public enum EmployeeAccessRole
     FrontDesk
 }
 
+[JsonConverter(typeof(JsonStringEnumConverter))]
 public enum EmployeeAccessRequestStatus
 {
     Pending,

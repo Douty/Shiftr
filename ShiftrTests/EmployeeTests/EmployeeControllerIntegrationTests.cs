@@ -48,7 +48,12 @@ public sealed class EmployeeControllerIntegrationTests : IClassFixture<ApiTestFa
     {
         using var scope = _factory.Services.CreateScope();
         var database = scope.ServiceProvider.GetRequiredService<ShiftrDbContext>();
-        database.Employees.RemoveRange(await database.Employees.ToListAsync());
+        var employees = await database.Employees.ToListAsync();
+        var employeeIds = employees.Select(employee => employee.Id).ToArray();
+        database.ShiftNotes.RemoveRange(await database.ShiftNotes
+            .Where(note => employeeIds.Contains(note.AuthorEmployeeId))
+            .ToListAsync());
+        database.Employees.RemoveRange(employees);
         await database.SaveChangesAsync();
 
         if (!await database.Properties.AnyAsync())
